@@ -22,7 +22,7 @@ try:
 	while ammount_received < ammount_expected:
 		data = sock.recv(16)
 		ammount_received += len(data)
-		print('received "%s"' % data, file=sys.stderr)
+		print('received "%s"' % data.decode('utf-8'), file=sys.stderr)
 
 finally:
 	print('closing socket', sys.stderr)
