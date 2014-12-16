@@ -1,0 +1,7 @@
+understand UDP and TCP
+-write a simple socket!! :D
+
+split file into chuncks and identify chunks using Hashes.
+
+protocol. (do this last)
+

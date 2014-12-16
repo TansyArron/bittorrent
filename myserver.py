@@ -1,34 +1,33 @@
 import socket
 import sys
 
-HOST = '' # Symbolic name meaning all available interfaces
-PORT = 8888 # Arbitrary non-privilaged PORT
+# create socket
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server_address = ('localhost', 8888)
+print('starting up on %s port %s' % server_address, file=sys.stderr)
+sock.bind(server_address)
 
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-print 'Socket created!'
+# listen for incoming connections
+sock.listen(1)
 
-try:
-	s.bind((HOST, PORT))
-except socket.error, msg:
-	print 'Bind failed. Error Code: ' + str(msg[0]) + ' Message: ' + msg[1]
-	sys.exit()
+while True:
+	# wait for a connections
+	print('waiting for a connection', file=sys.stderr)
+	connection, client_address = sock.accept()
 
-print "Socket bind complete"
-
-s.listen(10)
-print 'Socket now listening'
-
-# keep talking to the client
-while 1:
-	# wait to accept a connection - blocking call
-	conn, addr = s.accept()
-	print 'Connected with' + addr[0] + ' : ' + str(addr[1])
-	data = conn.recv(1024)
-	conn.sendall(data)
-	reply = 'OK...' + data
-	if not data:
-		break
-	conn.sendall(reply)	
-
-conn.close()
-s.close()
+	try:
+		print('connection from', client_address, file=sys.stderr)
+		# Receive the data in small chunks and retransmit it
+		while True:
+			data = connection.recv(16)
+			print('received "%s"' % data, file=sys.stderr)
+			if data:
+				print('sending data back to the client', file=sys.stderr)
+				connection.sendall(data)
+			else:
+				print('no more data from', client_address, file=sys.stderr)
+				break
+	finally:
+		# clean up the connection
+		connection.close()
+		
