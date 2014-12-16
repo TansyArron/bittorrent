@@ -12,7 +12,7 @@ while True:
 	data, address = sock.recvfrom(4096)
 
 	print('received %s bytes from %s' % (len(data), address), file = sys.stderr)
-	print(sys.stderr, data)
+	print(sys.stderr, data.decode('utf-8'))
 
 	if data:
 		sent = sock.sendto(data, address)
