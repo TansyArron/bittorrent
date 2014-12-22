@@ -1,7 +1,19 @@
 understand UDP and TCP
--write a simple socket!! :D
+DONE-write a simple socket!! :D
 
-split file into chuncks and identify chunks using Hashes.
+Parse metainfo file
+Connect to tracker specified in metainfo
+Receive IP addresses of peers
+
+Connect with seed (just one, to start)
+
+Handshake:
+	20 bytes: ascii char 19 string "BitTorrent Protocol"
+	8 bytes: for extensions. All 0's.
+	20 bytes: SHA1 hash of bencoded info value in metafile. If both sides don't send the same they don't want to participate in the same swarm. 
+	20 bytes: peer ID used to identifiy this client. If peer ID doesn't match expected ID, connection is severed. 
+
+split file into chunks and identify chunks using Hashes.
 
 protocol. (do this last)
 
