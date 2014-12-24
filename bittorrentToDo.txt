@@ -1,7 +1,9 @@
-understand UDP and TCP
+
 DONE-write a simple socket!! :D
 
 Parse metainfo file
+	DONE- write bencode
+	write decode
 Connect to tracker specified in metainfo
 Receive IP addresses of peers
 
@@ -15,5 +17,5 @@ Handshake:
 
 split file into chunks and identify chunks using Hashes.
 
-protocol. (do this last)
+
 

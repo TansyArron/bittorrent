@@ -7,42 +7,26 @@ class BencodeError(Exception):
 		self.data = data
 
 	def __str__(self):
-		return self.mode + self.value + data
+		return 'mode: {self.mode}\nvalue: {self.value}\ndata: {self.data}'.format(self=self)
 
-def encode_int(data):
+def encode_int(i):
 	# Int = i+int+e
-	if type(data) == int:
-		return 'i'+ str(data) + 'e'
+	return 'i{}e'.format(i)
 
-def decode_int(data):
-	return data[1:-1]
-
-def encode_string(data):
+def encode_string(s):
 	# String = len(string):string
-	if type(data) == str:
-		return str(len(data))+':'+data
+	return '{}:{}'.format(len(s), s)
 
-def decode_string(data):
-	return data[2:]
-
-def encode_list(data):
+def encode_list(l):
 	# Lists = l+(bencoded elements)+e
-	if type(data) == list:
-		temp = ''.join(encode(x) for x in data)
-		return 'l'+temp+'e'
+	encoded_str = ''.join(encode(x) for x in l)
+	return 'l{}e'.format(encoded_str)
 
-def decode_list(data):
-	pass
-
-def encode_dict(data):
+def encode_dict(d):
 	# Dictionaries = d+(bencoded elements)+e. 
 	# Keys must be strings and appear in sorted order
-	if type(data) == dict:
-		temp = [encode_string(key) + encode(data[key]) for key in sorted(data.keys())]
-		return 'd'+ ''.join(temp)+'e'
-
-def decode_dict(data):
-	pass
+	dictionary = [encode_string(key) + encode(d[key]) for key in sorted(d.keys())]
+	return 'd{}e'.format(''.join(dictionary))
 
 encode_functions = {
 	int: encode_int,
@@ -51,27 +35,11 @@ encode_functions = {
 	dict: encode_dict
 }		
 
-decode_functions = {
-	'i': decode_int,
-	's': decode_string,
-	'l': decode_list,
-	'd': decode_dict
-}
 def encode(data):
 	try:
 		return encode_functions[type(data)](data)
 	except KeyError:
 		raise BencodeError("Encode", "Unknown data type", data)
-
-def decode(data):
-	if data[0].isdigit():
-		token = 's'
-	else:
-		token = data[0]
-	try:
-		return decode_functions[token](data)
-	except KeyError:
-		raise BencodeError("Decode", "Unknown data type", data)
 
 encodedInt = encode(5)
 encodedString = encode('what')
@@ -79,5 +47,6 @@ encodedList = encode(['some', 'things', 5, 7, 8])
 encodedDict1 = encode({'four':4, 'six':6, 'eight':8})
 encodedDict2 = encode({'spam':['a','b']})
 
-print(decode(encodedString))
-print(decode(encodedInt))
+print(encodedList)
+print(encodedDict1)
+print(encodedDict2)
