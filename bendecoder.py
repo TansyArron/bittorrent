@@ -1,7 +1,7 @@
 
 import re
 
-def tokenize(data, match=re.compile(r"([idl])|($\d+):|(-?\d+)").match):
+def tokenize(data, match=re.compile("([idel])|(\d+):|(-?\d+)").match):
 	i = 0
 	while i < len(data):
 		m = match(data, i) 		# Create match object "m" 
@@ -29,6 +29,7 @@ def decode_item(next, token):
 		data = []
 		tok = next()
 		while tok != "e":
+			print("Here!")
 			data.append(decode_item(next, tok))
 			tok = next()
 		if token == "d":
@@ -36,58 +37,22 @@ def decode_item(next, token):
 	else:
 		raise ValueError(token)
 	return data
-def decode_int(byte_string):
-	# Where string begins with 'i'
-	int_re = re.compile(rb'[i](?P<digits>-?\d+)[e]')
-	match = int_re.match(byte_string)
-	if not match:
-		import pdb; pdb.set_trace()
-		raise Exception("Not a match")
-	digits = match.group('digits')
-	int_len = len(digits)
-	int_bytes_start = 1
-	int_bytes_end = 1 + int_len
-	int_bytes = byte_string[int_bytes_start:int_bytes_end]
-	decoded_int = int_bytes.decode("utf-8")
-	return (decoded_int, int_bytes_end + 1)
 
-def decode_string(byte_string):
-	# where string begins with 'int:' 
-	string_re = re.compile(rb'(?P<digits>\d+):')
-	match = string_re.match(byte_string)
-	if not match:
-		# import pdb; pdb.set_trace()
-		raise Exception("Not a match")
-	digits = match.group('digits')
-	str_len = int(digits)
-	str_bytes_start = 1+len(digits)
-	str_bytes_end = str_bytes_start + str_len + 1
-	str_bytes = byte_string[str_bytes_start:str_bytes_end]
-	decoded_str = str_bytes.decode("utf-8")
-	return (decoded_str, str_bytes_end)
+def decode(text):
+	# src = tokenize(text)
+	# data = decode_item(next(src), next(src))
+	try:
+		src = tokenize(text) #generates tokens/strings/ints in order
+		data = decode_item(src.__next__, next(src))
+		# for token in src: #look for more tokens
+		# 	raise SyntaxError("trailing junk")
+	except (AttributeError, ValueError, StopIteration) as e:
+		raise (SyntaxError("syntax error")) from e
+	return data
 
-#   def decode(text):
-# 	if text[0] == b"d":
-
-# 	elif text[0] == b"l":
-# 	elif text[0] == b"i":
-# 	else:
-# 	try:
-# 		src = tokenize(text) #generates tokens/strings/ints in order
-# 		data = decode_item(src.__next__, next(src))
-# 		# for token in src: #look for more tokens
-# 		# 	raise SyntaxError("trailing junk")
-# 	except (AttributeError, ValueError, StopIteration) as e:
-# 		raise (SyntaxError("syntax error")) from e
-# 	return data
-i = 'i255e'
-print(decode_int(i.encode('utf-8')))
-
-s = ':annoåunce'
-print(type(str(len(s.encode('utf-8'))).encode('ascii') + s.encode('utf-8')))
-# with open('./flagfromserver.torrent','rb') as f:
-# 	flag = f.read()
-# 	print(decode(flag))
-	# decode(flag)
-# print(decode(flag))
+# print(list(tokenize("4:spam")))
+# print(list(tokenize("i3e")))
+flag = open('./flagfromserver.torrent','r', encoding='latin')
+flag = flag.read()
+print(decode(flag))
 # print(decode('i14e'))
