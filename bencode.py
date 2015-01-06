@@ -47,6 +47,6 @@ encodedList = encode(['some', 'things', 5, 7, 8])
 encodedDict1 = encode({'four':4, 'six':6, 'eight':8})
 encodedDict2 = encode({'spam':['a','b']})
 
-print(encodedList)
-print(encodedDict1)
+# print(encodedList)
+# print(encodedDict1)
 print(encodedDict2)

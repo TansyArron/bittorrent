@@ -1,5 +1,4 @@
 import re
-import pudb
 
 def decode_int(byte_string):
 	int_re = re.compile(rb'[i](?P<digits>-?\d+)[e]')
@@ -57,17 +56,17 @@ def decode(byte_string):
 	elif byte_string[:1] in b'123456789':						
 		return decode_string(byte_string)
 	else:
-		pdb.set_trace()
 		raise Exception("Malformed data")
 
-def bendecoder(byte_string):
+def bdecoder(byte_string):
 	dict_check = re.compile(rb'(^d)')
 	match = dict_check.match(byte_string)
 	if not match:
 		raise Exception("File does not start with dictionary")
 
 	return decode(byte_string)[0]
-with open('flagfromserver.torrent', 'rb') as f:
-	print(bendecoder(f.read()))
+# with open('flagfromserver.torrent', 'rb') as f:
+# 	print(bdecoder(f.read()))
+	
 # pudb.set_trace()
-# print(bendecoder(b'd4:spaml1:a1:bee'))
+# print(bdecoder(b'd4:spaml1:a1:bee'))

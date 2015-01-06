@@ -1,21 +1,31 @@
 
-DONE-write a simple socket!! :D
+DONE - write a simple socket!! :D
+DOWNLOAD A FILE
+	Parse metainfo file
+		DONE - write bencode
+		DONE - write decoder
 
-Parse metainfo file
-	DONE- write bencode
-	write decode
-Connect to tracker specified in metainfo
-Receive IP addresses of peers
+	Form Get request (announce URL)
+	Connect to tracker
+	Receive text file from announce
+	parse IP addresses of peers
 
-Connect with seed (just one, to start)
+	Connect with seed (just one, to start)
 
-Handshake:
-	20 bytes: ascii char 19 string "BitTorrent Protocol"
-	8 bytes: for extensions. All 0's.
-	20 bytes: SHA1 hash of bencoded info value in metafile. If both sides don't send the same they don't want to participate in the same swarm. 
-	20 bytes: peer ID used to identifiy this client. If peer ID doesn't match expected ID, connection is severed. 
+	Handshake:
+		20 bytes: ascii char 19 string "BitTorrent Protocol"
+		8 bytes: for extensions. All 0's.
+		20 bytes: SHA1 hash of bencoded info value in metafile. If both sides don't send the same they don't want to participate in the same swarm. 
+		20 bytes: peer ID used to identifiy this client. If peer ID doesn't match expected ID, connection is severed. 
 
-split file into chunks and identify chunks using Hashes.
+
+
+
+
+
+SEED A FILE	/ CREATE A .TORRENT
+	DONE - write bencode
+	split file into chunks and identify chunks using Hashes.
 
 
 

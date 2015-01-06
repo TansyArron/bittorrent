@@ -3,7 +3,7 @@ import sys
 
 # create socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server_address = ('', 8888)
+server_address = ('localhost', 8888)
 print('starting up on %s port %s' % server_address, file=sys.stderr)
 sock.bind(server_address)
 
