@@ -11,7 +11,7 @@ def decode_int(byte_string):
 	int_bytes_start = 1
 	int_bytes_end = 1 + int_len
 	int_bytes = byte_string[int_bytes_start:int_bytes_end]
-	decoded_int = int_bytes.decode("utf-8")
+	decoded_int = int_bytes#.decode("utf-8")
 	remaining_bytes = byte_string[int_bytes_end + 1:]
 	return decoded_int, remaining_bytes
 
@@ -25,16 +25,18 @@ def decode_string(byte_string):
 	str_bytes_start = 1+len(digits)
 	str_bytes_end = str_bytes_start + str_len
 	str_bytes = byte_string[str_bytes_start:str_bytes_end]
-	decoded_str = str_bytes.decode("utf-8")
+	decoded_str = str_bytes#.decode("utf-8")
 	remaining_bytes = byte_string[str_bytes_end:]
 	return decoded_str, remaining_bytes
 
 def decode_dict(byte_string):
 	key_value_list, remaining_bytes = decode_list(byte_string)
 	decoded_dict = dict(zip(key_value_list[0::2], key_value_list[1::2]))
-	if 'pieces' in decoded_dict:
-		decoded_dict['pieces'] = decoded_dict['pieces'].encode('utf-8')
-		decoded_dict['pieces'] = ' '.join('{:02x}'.format(b) for b in decoded_dict['pieces'])
+	if len(remaining_bytes) == 0:
+		ben_string = b'd' + byte_string
+	else:
+		ben_string = b'd' + byte_string[:-len(remaining_bytes)]
+	decoded_dict['ben_string'] = ben_string
 	return decoded_dict, remaining_bytes
 
 def decode_list(byte_string):
@@ -65,8 +67,12 @@ def bdecoder(byte_string):
 		raise Exception("File does not start with dictionary")
 
 	return decode(byte_string)[0]
+
 # with open('flagfromserver.torrent', 'rb') as f:
-# 	print(bdecoder(f.read()))
+# 	info_dictionary = bdecoder(f.read())
+# 	print(info_dictionary['info'])
 	
 # pudb.set_trace()
 # print(bdecoder(b'd4:spaml1:a1:bee'))
+
+

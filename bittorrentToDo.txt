@@ -2,21 +2,38 @@
 DONE - write a simple socket!! :D
 DOWNLOAD A FILE
 	Parse metainfo file
-		DONE - write bencode
-		DONE - write decoder
+DONE - 	write bencode
+DONE - 	write decoder
 
-	Form Get request (announce URL)
-	Connect to tracker
-	Receive text file from announce
-	parse IP addresses of peers
+DONE -	Form Get request (announce URL)
+		To contact the tracker a peer MUST send a standard HTTP GET request using the URL in the "announce" entry of the metainfo file. The GET request must be parametrized as specified in the HTTP protocol. The following parameters must be present in the request:
+
+TODO: FIX INFOHASH- Currently hard coding a working hash.
+ 	Encoding error at byte 71.
+		'info_hash':
+			This is a REQUIRED 20-byte SHA1 hash value. In order to obtain this value the peer must calculate the SHA1 of the value of the "info" key in the metainfo file.
+		'peer_id':
+			This is a REQUIRED string and must contain the 20-byte self-designated ID of the peer.
+		'port':
+			The port number that the peer is listening to for incoming connections from other peers. BTP/1.0 does not specify a standard port number, nor a port range to be used. This key is REQUIRED.
+		'uploaded':
+			This is a base ten integer value. It denotes the total amount of bytes that the peer has uploaded in the swarm since it sent the "started" event to the tracker. This key is REQUIRED.
+		'downloaded':
+			This is a base ten integer value. It denotes the total amount of bytes that the peer has downloaded in the swarm since it sent the "started" event to the tracker. This key is REQUIRED.
+		'left':
+			This is a base ten integer value. It denotes the total amount of bytes that the peer needs in this torrent in order to complete its download. This key is REQUIRED.
+		
+DONE -	Receive text file
+		bdecode text file
+		parse IP address of peer(s)
 
 	Connect with seed (just one, to start)
 
-	Handshake:
-		20 bytes: ascii char 19 string "BitTorrent Protocol"
-		8 bytes: for extensions. All 0's.
-		20 bytes: SHA1 hash of bencoded info value in metafile. If both sides don't send the same they don't want to participate in the same swarm. 
-		20 bytes: peer ID used to identifiy this client. If peer ID doesn't match expected ID, connection is severed. 
+		Handshake:
+			20 bytes: ascii char 19 string "BitTorrent Protocol"
+			8 bytes: for extensions. All 0's.
+			20 bytes: SHA1 hash of bencoded info value in metafile. If both sides don't send the same they don't want to participate in the same swarm. 
+			20 bytes: peer ID used to identifiy this client. If peer ID doesn't match expected ID, connection is severed. 
 
 
 

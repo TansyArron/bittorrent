@@ -41,12 +41,12 @@ def encode(data):
 	except KeyError:
 		raise BencodeError("Encode", "Unknown data type", data)
 
-encodedInt = encode(5)
-encodedString = encode('what')
-encodedList = encode(['some', 'things', 5, 7, 8])
-encodedDict1 = encode({'four':4, 'six':6, 'eight':8})
-encodedDict2 = encode({'spam':['a','b']})
+# encodedInt = encode(5)
+# encodedString = encode('what')
+# encodedList = encode(['some', 'things', 5, 7, 8])
+# encodedDict1 = encode({'four':4, 'six':6, 'eight':8})
+# encodedDict2 = encode({'spam':['a','b']})
 
 # print(encodedList)
 # print(encodedDict1)
-print(encodedDict2)
+# print(encodedDict2)
