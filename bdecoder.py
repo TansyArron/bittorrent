@@ -1,4 +1,5 @@
 import re
+# import pudb
 
 def decode_int(byte_string):
 	int_re = re.compile(rb'[i](?P<digits>-?\d+)[e]')
@@ -67,12 +68,9 @@ def bdecoder(byte_string):
 		raise Exception("File does not start with dictionary")
 
 	return decode(byte_string)[0]
-
+# pudb.set_trace()
 # with open('flagfromserver.torrent', 'rb') as f:
 # 	info_dictionary = bdecoder(f.read())
 # 	print(info_dictionary['info'])
-	
-# pudb.set_trace()
-# print(bdecoder(b'd4:spaml1:a1:bee'))
 
 

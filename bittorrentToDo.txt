@@ -24,7 +24,7 @@ TODO: FIX INFOHASH- Currently hard coding a working hash.
 			This is a base ten integer value. It denotes the total amount of bytes that the peer needs in this torrent in order to complete its download. This key is REQUIRED.
 		
 DONE -	Receive text file
-		bdecode text file
+DONE -	bdecode text file
 		parse IP address of peer(s)
 
 	Connect with seed (just one, to start)
