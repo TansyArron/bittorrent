@@ -1,34 +1,34 @@
+'''Bencoding decoder
+spec can be found here:
+https://wiki.theory.org/BitTorrentSpecification#Bencoding
+'''
 import re
-# import pudb
 
 def decode_int(byte_string):
 	int_re = re.compile(rb'[i](?P<digits>-?\d+)[e]')
 	match = int_re.match(byte_string)
 	if not match:
-		import pdb; pdb.set_trace()
-		raise Exception("Not a match")
+		raise Exception("Not a match. Expected 'i' <some digits> 'e', received %s", %byte_string[:10])
 	digits = match.group('digits')
 	int_len = len(digits)
 	int_bytes_start = 1
 	int_bytes_end = 1 + int_len
 	int_bytes = byte_string[int_bytes_start:int_bytes_end]
-	decoded_int = int_bytes#.decode("utf-8")
 	remaining_bytes = byte_string[int_bytes_end + 1:]
-	return decoded_int, remaining_bytes
+	return int_bytes, remaining_bytes
 
 def decode_string(byte_string):
 	string_re = re.compile(rb'(?P<digits>\d+):')
 	match = string_re.match(byte_string)
 	if not match:
-		raise Exception("Not a match")
+		raise Exception("Not a match. Expected <some digits> ':' <some string>, recieved %s", %byte_string[:10])
 	digits = match.group('digits')
 	str_len = int(digits)
 	str_bytes_start = 1+len(digits)
 	str_bytes_end = str_bytes_start + str_len
 	str_bytes = byte_string[str_bytes_start:str_bytes_end]
-	decoded_str = str_bytes#.decode("utf-8")
 	remaining_bytes = byte_string[str_bytes_end:]
-	return decoded_str, remaining_bytes
+	return str_bytes, remaining_bytes
 
 def decode_dict(byte_string):
 	key_value_list, remaining_bytes = decode_list(byte_string)
@@ -44,11 +44,11 @@ def decode_list(byte_string):
 	remaining_bytes = byte_string
 	this_list = []
 	while remaining_bytes[0] != ord(b'e'):
-		value, remaining_bytes = decode(remaining_bytes)
+		value, remaining_bytes = type_handler(remaining_bytes)
 		this_list.append(value)
 	return this_list, remaining_bytes[1:]
 
-def decode(byte_string):
+def type_handler(byte_string):
 
 	if byte_string[0] == ord(b'd'):
 		return decode_dict(byte_string[1:])
@@ -59,18 +59,13 @@ def decode(byte_string):
 	elif byte_string[:1] in b'123456789':						
 		return decode_string(byte_string)
 	else:
-		raise Exception("Malformed data")
+		raise Exception("Malformed data. First character of byte_string: %s", %byte_string[0])
 
 def bdecoder(byte_string):
 	dict_check = re.compile(rb'(^d)')
 	match = dict_check.match(byte_string)
 	if not match:
-		raise Exception("File does not start with dictionary")
-
-	return decode(byte_string)[0]
-# pudb.set_trace()
-# with open('flagfromserver.torrent', 'rb') as f:
-# 	info_dictionary = bdecoder(f.read())
-# 	print(info_dictionary['info'])
+		raise Exception("Malformed data. File does not start with dictionary")
+	return type_handler(byte_string)[0]
 
 
