@@ -8,7 +8,7 @@ def decode_int(byte_string):
 	int_re = re.compile(rb'[i](?P<digits>-?\d+)[e]')
 	match = int_re.match(byte_string)
 	if not match:
-		raise Exception("Not a match. Expected 'i' <some digits> 'e', received %s", %byte_string[:10])
+		raise Exception("Not a match. Expected 'i' <some digits> 'e', received %s") %byte_string[:10]
 	digits = match.group('digits')
 	int_len = len(digits)
 	int_bytes_start = 1
@@ -21,7 +21,7 @@ def decode_string(byte_string):
 	string_re = re.compile(rb'(?P<digits>\d+):')
 	match = string_re.match(byte_string)
 	if not match:
-		raise Exception("Not a match. Expected <some digits> ':' <some string>, recieved %s", %byte_string[:10])
+		raise Exception("Not a match. Expected <some digits> ':' <some string>, recieved %s") %byte_string[:10]
 	digits = match.group('digits')
 	str_len = int(digits)
 	str_bytes_start = 1+len(digits)
@@ -59,7 +59,7 @@ def type_handler(byte_string):
 	elif byte_string[:1] in b'123456789':						
 		return decode_string(byte_string)
 	else:
-		raise Exception("Malformed data. First character of byte_string: %s", %byte_string[0])
+		raise Exception("Malformed data. First character of byte_string: %s") %byte_string[0]
 
 def bdecoder(byte_string):
 	dict_check = re.compile(rb'(^d)')
