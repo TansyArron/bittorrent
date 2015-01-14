@@ -1,15 +1,16 @@
 
 DONE - write a simple socket!! :D
+
 DOWNLOAD A FILE
-	Parse metainfo file
+
 DONE - 	write bencode
 DONE - 	write decoder
-
+DONE -	Decode and parse metainfo file 
 DONE -	Form Get request (announce URL)
 		To contact the tracker a peer MUST send a standard HTTP GET request using the URL in the "announce" entry of the metainfo file. The GET request must be parametrized as specified in the HTTP protocol. The following parameters must be present in the request:
 
-TODO: FIX INFOHASH- Currently hard coding a working hash.
- 	Encoding error at byte 71.
+DONE - 	TODO: FIX INFOHASH- Currently hard coding a working hash.
+ 		Encoding error at byte 71.
 		'info_hash':
 			This is a REQUIRED 20-byte SHA1 hash value. In order to obtain this value the peer must calculate the SHA1 of the value of the "info" key in the metainfo file.
 		'peer_id':
@@ -25,16 +26,38 @@ TODO: FIX INFOHASH- Currently hard coding a working hash.
 		
 DONE -	Receive text file
 DONE -	bdecode text file
-		parse IP address of peer(s)
+DONE -	parse IP address of peer(s)
 
-	Connect with seed (just one, to start)
+DONE -	Connect with seed (just one, to start)
 
-		Handshake:
+DONE -	Handshake:
 			20 bytes: ascii char 19 string "BitTorrent Protocol"
 			8 bytes: for extensions. All 0's.
 			20 bytes: SHA1 hash of bencoded info value in metafile. If both sides don't send the same they don't want to participate in the same swarm. 
 			20 bytes: peer ID used to identifiy this client. If peer ID doesn't match expected ID, connection is severed. 
 
+DONE -	Check returned handshake - match sha1 hash
+		
+		Modify Socket OR switch to using Twisted
+		
+		Create peer object:
+			peer_ID 
+			IP
+			Port
+			State (choke etc?)
+
+		Create torrent object:
+			file size
+			peers
+			peice size
+			announce url
+			etc
+
+		Create manager object:
+			HANDLE ALL OF THE FUNCTIONS!!!
+
+
+		
 
 
 
