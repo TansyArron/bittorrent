@@ -3,7 +3,7 @@ spec can be found here:
 https://wiki.theory.org/BitTorrentSpecification#Bencoding
 '''
 import re
-
+import requests
 def decode_int(byte_string):
 	int_re = re.compile(rb'[i](?P<digits>-?\d+)[e]')
 	match = int_re.match(byte_string)
@@ -65,7 +65,6 @@ def bdecoder(byte_string):
 	dict_check = re.compile(rb'(^d)')
 	match = dict_check.match(byte_string)
 	if not match:
+		print("byte_string begins:", byte_string[:10])
 		raise Exception("Malformed data. File does not start with dictionary")
 	return type_handler(byte_string)[0]
-
-

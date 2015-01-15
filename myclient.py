@@ -14,7 +14,7 @@ def create_client_socket(IP, port, message):
 		amount_received = 0
 		amount_expected = len(message)
 
-		data = sock.recv(1460)
+		data = sock.recv()
 		amount_received += len(data)
 		print('received "%s"' % data)
 
@@ -22,3 +22,4 @@ def create_client_socket(IP, port, message):
 		print('closing socket', sys.stderr)
 		sock.close()
 	return data
+# create_client_socket('96.126.104.219', 63103, b'\x13BitTorrent protocol\x00\x00\x00\x00\x00\x00\x00\x00+\x15\xca+\xfdH\xcd\xd7m9\xecU\xa3\xab\x1b\x8aW\x18\n\t-TZ-0000-39576683547')

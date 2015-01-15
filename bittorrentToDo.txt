@@ -37,24 +37,34 @@ DONE -	Handshake:
 			20 bytes: peer ID used to identifiy this client. If peer ID doesn't match expected ID, connection is severed. 
 
 DONE -	Check returned handshake - match sha1 hash
-		
-		Modify Socket OR switch to using Twisted
-		
-		Create peer object:
+	
+	REFACTOR
+
+DONE -	Create peer object:
 			peer_ID 
 			IP
 			Port
-			State (choke etc?)
+		#	State (choke etc?)
+		#	message handling
+			create socket
+		#	perform and check handshake
 
-		Create torrent object:
+DONE -	Create torrent object:
 			file size
 			peers
+				create new peer if peer form is {peerID:(IP, port)}
 			peice size
 			announce url
-			etc
+		#	check file peices against hash
+		#	get next block
+			update tracker info
 
-		Create manager object:
-			HANDLE ALL OF THE FUNCTIONS!!!
+DONE -	Create manager object:
+			Initiate torrent object
+			add/remove peers
+			while torrent is unfinished:
+				connect with available peers
+				keep torrenting.
 
 
 		

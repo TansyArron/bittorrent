@@ -17,8 +17,6 @@ def parse_meta_info():
 	return meta_info_dict
 
 def create_tracker_query(meta_info_dict):
-	'''TODO: handle multiple file downloads
-	'''
 	info = meta_info_dict[b'info']
 	ben_string = info['ben_string']
 	info_hash = hashlib.sha1(ben_string).digest()
