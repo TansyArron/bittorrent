@@ -14,7 +14,7 @@ def create_client_socket(IP, port, message):
 		amount_received = 0
 		amount_expected = len(message)
 
-		data = sock.recv(146)
+		data = sock.recv(1460)
 		amount_received += len(data)
 		print('received "%s"' % data)
 

@@ -19,8 +19,7 @@ In version 1.0 of the BitTorrent protocol, pstrlen = 19, and
 pstr = "BitTorrent protocol".
 
 for flagfromserver.torrent handshake should look like:
-'\x13BitTorrent protocol\x00\x00\x00\x00\x00\x00\x00\x00+\x15\xca+\xfdH\xcd\xd7m
-9\xecU\xa3\xab\x1b\x8aW\x18\n\t-TZ-0000-00000000000'
+'\x13BitTorrent protocol\x00\x00\x00\x00\x00\x00\x00\x00+\x15\xca+\xfdH\xcd\xd7m9\xecU\xa3\xab\x1b\x8aW\x18\n\t-TZ-0000-00000000000'
 
 
 '''

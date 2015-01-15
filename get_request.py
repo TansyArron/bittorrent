@@ -55,8 +55,6 @@ peer_response = myclient.create_client_socket('96.126.104.219', 63103, handshake
 if peer_response[28:48] == handshake_string[28:48]:
 	#create peer object
 	print("YAY! A PEER!!!")
-	print("response", peer_response[25:])
-	print("handshake", handshake_string[25:])
 else:
 	print("not a match")
 # myclient.create_client_socket('96.126.104.219', 63103, handshake_string)
