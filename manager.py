@@ -23,3 +23,4 @@ class Manager():
 
 torrent_file = sys.argv[1]
 manager = Manager(torrent_file)
+print(manager.torrent.left)

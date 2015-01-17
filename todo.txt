@@ -9,7 +9,7 @@ DONE -	Decode and parse metainfo file
 DONE -	Form Get request (announce URL)
 		To contact the tracker a peer MUST send a standard HTTP GET request using the URL in the "announce" entry of the metainfo file. The GET request must be parametrized as specified in the HTTP protocol. The following parameters must be present in the request:
 
-DONE - 	TODO: FIX INFOHASH- Currently hard coding a working hash.
+DONE - 	FIX INFOHASH- Currently hard coding a working hash.
  		Encoding error at byte 71.
 		'info_hash':
 			This is a REQUIRED 20-byte SHA1 hash value. In order to obtain this value the peer must calculate the SHA1 of the value of the "info" key in the metainfo file.
@@ -52,7 +52,7 @@ DONE -	Create peer object:
 DONE -	Create torrent object:
 			file size
 			peers
-				create new peer if peer form is {peerID:(IP, port)}
+			create new peer if peer form is {peerID:(IP, port)}
 			peice size
 			announce url
 		#	check file peices against hash
@@ -76,6 +76,8 @@ DONE -	Create manager object:
 SEED A FILE	/ CREATE A .TORRENT
 	DONE - write bencode
 	split file into chunks and identify chunks using Hashes.
+	create info_dict
+	bencode info_dict
 
 
 
