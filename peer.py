@@ -6,7 +6,7 @@ class Peer():
 	def __init__(self, ip, port):
 		self.IP = ip
 		self.port = port
-		self.messages = {'keep-alive':['0000'], 'choke':['0001', '0'], 'unchoke':['0001', '1'], 'interested':['0001', '2'], 'not interested':['0001', '3'], 'have':['0005', '4'], 'bitfield': ['0001', '5'], 'request': ['0013', '6'], 'piece': ['0009', '7'], 'cancel': ['0013', '8'], 'port':['0003', '9']} #choke, unchoke, interested etc
+		self.messages = {'0':'0001', '1':'0001', '2':'0001', '3':'0001', '4':'0005', '5':'0001', '6':'0013', '7':'0009', '8':'0013', '9':'0003'} #choke, unchoke, interested etc
 		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.handshake_bytes = None
 		self.pieces = None
@@ -48,16 +48,16 @@ class Peer():
 		return message
 
 	def send_message_and_update_state(self, message_id):
-		message = self.construct_message(message_id)
-		yield from io_loop.sock_sendall(self.sock, message)
+		# message = self.construct_message(message_id)
+		# yield from io_loop.sock_sendall(self.sock, message)
 		if message_id == '0':
 			self.state['am_choking'] = 1
 		elif message_id == '1':
 			self.state['am_choking'] = 0
 		elif message_id == '2':
-			self.state['am_interested'] == 1
+			self.state['am_interested'] = 1
 		elif message_id == '3':
-			self.state['am_interested'] == 0
+			self.state['am_interested'] = 0
 
 	def receive_message_and_update_state(self, message_id):
 		if message_id == '0':
@@ -70,5 +70,6 @@ class Peer():
 			self.state['peer_interested'] == 0
 
 new_peer = Peer('ip', 'port')
-new_peer.construct_message('interested')
+new_peer.send_message_and_update_state('2')
+print(new_peer.state)
 
