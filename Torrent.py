@@ -19,10 +19,13 @@ class Torrent():
 		self.port =  '6881' #TODO: Try ports in range (6881,6889)
 		self.length = self.info_dict[b'length'] if b'length' in self.info_dict \
 				else sum([int(f[b'length']) for f in self.info_dict[b'files']])
+		self.piece_length = self.info_dict[b'peice length']
+		self.pieces = self.info_dict[b'pieces']
 		self.tracker_info = self.get_info_from_tracker()
 		self.peer_info = self.tracker_info[b'peers']
 		self.peers = self.get_peers()
 		self.tracker_id = None
+		self.have = [0]*int(self.pieces)
 
 	def downloaded(self):
 		pass
@@ -52,12 +55,8 @@ class Torrent():
 		}
 
 	def get_info_from_tracker(self):
-		tracker_info_req = requests.get(self.announce, params=self.get_params(), stream=True)
-		tracker_info = tracker_info_req.raw.read()
-		print("Tracker request returns:", tracker_info)
-		parsed =  bencode.bdecoder(tracker_info)
-		print(parsed)
-		return parsed
+		tracker_info = requests.get(self.announce, params=self.get_params(), stream=True).raw.read()
+		return bencode.bdecoder(tracker_info)
 
 	def update_tracker_id(self):
 		if 'tracker_id' in self.tracker_info:
@@ -65,10 +64,8 @@ class Torrent():
 			
 	def get_peers(self):
 		if isinstance(self.peer_info, list):
-			print("PEER INFO",self.peer_info)
 			peer_list = [peer.Peer(peer_dict[ip], peer_dict[port])for peer_dict in self.peer_info]
 		else:
-
 			peers = [self.peer_info[i:i+6] for i in range(0, len(self.peer_info), 6)]
 			peer_list = [peer.Peer('.'.join(str(i) for i in p[:4]), int.from_bytes(p[4:], byteorder='big')) for p in peers]
 		return peer_list

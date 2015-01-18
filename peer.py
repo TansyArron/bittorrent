@@ -6,10 +6,16 @@ class Peer():
 	def __init__(self, ip, port):
 		self.IP = ip
 		self.port = port
-		self.messages = [] #choke, unchoke, interested etc
+		self.messages = {'keep-alive':['0000'], 'choke':['0001', '0'], 'unchoke':['0001', '1'], 'interested':['0001', '2'], 'not interested':['0001', '3'], 'have':['0005', '4'], 'bitfield': ['0001', '5'], 'request': ['0013', '6'], 'piece': ['0009', '7'], 'cancel': ['0013', '8'], 'port':['0003', '9']} #choke, unchoke, interested etc
 		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.handshake_bytes = None
-		self.pieces = ''
+		self.pieces = None
+		self.state = {
+				'am_choking' : 1,
+				'am_interested' : 0,
+				'peer_choking' : 1,
+				'peer_interested' : 0,
+		}
 
 	@asyncio.coroutine
 	def connect(self, message):
@@ -27,8 +33,42 @@ class Peer():
 			self.sock.close()
 			raise Exception('Peer returned invalid info_hash. Closing socket')
 		elif len(self.handshake_bytes) > 68:
-			self.peices = self.handshake_bytes[68:]
+			bitfield = self.handshake_bytes[68:]
+			bitstring = ''.join('{0:08b}'.format(ord(byte)) for byte in bitfield)
+			self.pieces = [int(c) for c in bitstring]
+		
+	def construct_message(self, message_id):
+		'''messages in the protocol take the form of 
+		<length prefix><message ID><payload>. The length prefix is a four byte 
+		big-endian value. The message ID is a single decimal byte. 
+		The payload is message dependent.
+		'''
+		elements = self.messages[message_id]
+		message = ''.join(elements)
+		return message
 
-		
-		
-		
+	def send_message_and_update_state(self, message_id):
+		message = self.construct_message(message_id)
+		yield from io_loop.sock_sendall(self.sock, message)
+		if message_id == '0':
+			self.state['am_choking'] = 1
+		elif message_id == '1':
+			self.state['am_choking'] = 0
+		elif message_id == '2':
+			self.state['am_interested'] == 1
+		elif message_id == '3':
+			self.state['am_interested'] == 0
+
+	def receive_message_and_update_state(self, message_id):
+		if message_id == '0':
+			self.state['peer_choking'] = 1
+		elif message_id == '1':
+			self.state['peer_choking'] = 0
+		elif message_id == '2':
+			self.state['peer_interested'] == 1
+		elif message_id == '3':
+			self.state['peer_interested'] == 0
+
+new_peer = Peer('ip', 'port')
+new_peer.construct_message('interested')
+
