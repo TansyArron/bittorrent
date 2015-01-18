@@ -1,26 +1,37 @@
 import sys
-import Torrent
-import myclient
+import torrent
+import asyncio
 
 class Manager():
 	def __init__(self, torrent_file):
-		self.torrent = Torrent.Torrent(torrent_file)
-		self.host = '0.0.0.0' #ifconfig thing. Get my current ip.
-		self.port = 6881 # try in range 6881, 6889.
+		self.torrent = torrent.Torrent(torrent_file)
 		self.connected_peers = []
 
-	def add_peer(self):
-		peer = self.torrent.peers.pop()
-		peer.connect(self.torrent.handshake)
-		self.connected_peers.append(peer)
+	@asyncio.coroutine
+	def add_peer(self, peer):
+		print('Adding a Peer')
+		try:
+			result = peer.connect(self.torrent.handshake)
+			yield from result
+			self.connected_peers.append(peer)
+		except Exception as e:
+			print('peer {} failed to connect. Exception: "{}"'.format(peer, e))
 
 	def remove_peer(self):
 		pass
 
 	def main(self):
-		while len(self.connected_peers) < 10 and self.torrent.peers:
-			self.add_peer()
+		loop = asyncio.get_event_loop()
+		peer = self.torrent.peers[0]
+		# for peer in self.torrent.peers:
+		# 	loop.create_task(self.add_peer(peer))
+		loop.create_task(self.add_peer(peer))
+		loop.run_forever()
+		
 
 torrent_file = sys.argv[1]
 manager = Manager(torrent_file)
-print(manager.torrent.left)
+manager.main()
+print(len(self.connected_peers))
+# manager.add_peer() 
+

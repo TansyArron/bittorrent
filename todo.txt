@@ -48,6 +48,8 @@ DONE -	Create peer object:
 		#	message handling
 			create socket
 		#	perform and check handshake
+		# 	parse bitfield or Have messages
+		#	update peer.has
 
 DONE -	Create torrent object:
 			file size

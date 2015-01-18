@@ -3,11 +3,13 @@ import bencode
 import random
 import requests
 import peer
+import asyncio
 
 class Torrent():
 	def __init__(self, torrent_file):
-		self.torrent_file = open(torrent_file, 'rb')
-		self.meta_info_dict = bencode.bdecoder(self.torrent_file.read())
+		with open(torrent_file, 'rb') as f:
+			self.torrent_file = f.read()
+		self.meta_info_dict = bencode.bdecoder(self.torrent_file)
 		self.announce = self.meta_info_dict[b'announce'].decode('utf-8')
 		self.info_dict = self.meta_info_dict[b'info']
 		self.bencoded_info_dict = self.info_dict['ben_string']
@@ -20,7 +22,7 @@ class Torrent():
 		self.tracker_info = self.get_info_from_tracker()
 		self.peer_info = self.tracker_info[b'peers']
 		self.peers = self.get_peers()
-		self.tracker_id = self.tracker_info[tracker_id]
+		self.tracker_id = None
 
 	def downloaded(self):
 		pass
@@ -30,7 +32,7 @@ class Torrent():
 		pstrlen = b'\x13'
 		pstr = b'BitTorrent protocol'
 		reserved = b'\x00\x00\x00\x00\x00\x00\x00\x00'
-		parts = [pstrlen, pstr, reserved, self.info_hash, self.peer_id]
+		parts = [pstrlen, pstr, reserved, self.info_hash, self.peer_id.encode()]
 		handshake_string = b''.join(parts)
 		return handshake_string
 			
@@ -41,25 +43,32 @@ class Torrent():
 	def get_params(self):
 		return {
 		'info_hash': self.info_hash,
-		'event' : 'started',
-		'downloaded' : self.downloaded,
-		'peer_id' : self.peer_id,
-		'port' : self.port,
-		'left' : self.left
+		'event': 'started',
+		'downloaded': self.downloaded,
+		'peer_id': self.peer_id,
+		'port': self.port,
+		'left': self.left,
+		'compact': 0,
 		}
 
 	def get_info_from_tracker(self):
-		tracker_info = requests.get(self.announce, params=self.get_params(), stream=True).raw.read()
-		return bencode.bdecoder(tracker_info)
+		tracker_info_req = requests.get(self.announce, params=self.get_params(), stream=True)
+		tracker_info = tracker_info_req.raw.read()
+		print("Tracker request returns:", tracker_info)
+		parsed =  bencode.bdecoder(tracker_info)
+		print(parsed)
+		return parsed
 
 	def update_tracker_id(self):
 		if 'tracker_id' in self.tracker_info:
 			self.tracker_id = self.tracker_info['tracker_id']
 			
 	def get_peers(self):
-		if type(self.peer_info) == list:
+		if isinstance(self.peer_info, list):
+			print("PEER INFO",self.peer_info)
 			peer_list = [peer.Peer(peer_dict[ip], peer_dict[port])for peer_dict in self.peer_info]
 		else:
+
 			peers = [self.peer_info[i:i+6] for i in range(0, len(self.peer_info), 6)]
 			peer_list = [peer.Peer('.'.join(str(i) for i in p[:4]), int.from_bytes(p[4:], byteorder='big')) for p in peers]
 		return peer_list

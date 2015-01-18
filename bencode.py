@@ -106,12 +106,12 @@ def type_handler(byte_string):
 	elif byte_string[:1] in b'123456789':						
 		return decode_string(byte_string)
 	else:
-		raise BencodeError("Malformed data", "Expected d, l, i or int. recieved:", byte_string[0])
+		raise BencodeError("Malformed data", "Expected d, l, i or int. recieved:", byte_string)
 
 def bdecoder(byte_string):
 	dict_check = re.compile(rb'(^d)')
 	match = dict_check.match(byte_string)
 	if not match:
-		print("byte_string begins:", byte_string[:10])
-		raise BencodeError("Malformed data.", "File does not start with dictionary", byte_string[0])
+		print("byte_string begins:", byte_string)
+		raise BencodeError("Malformed data.", "File does not start with dictionary", byte_string)
 	return type_handler(byte_string)[0]
