@@ -4,6 +4,7 @@ import random
 import requests
 import peer
 import asyncio
+import math
 
 class Torrent():
 	def __init__(self, torrent_file):
@@ -17,15 +18,16 @@ class Torrent():
 		self.downloaded = 0 # TODO: calculate "downloaded"
 		self.peer_id = '-'.join(['','TZ', '0000', str(random.randrange(10000000000,99999999999))])
 		self.port =  '6881' #TODO: Try ports in range (6881,6889)
-		self.length = self.info_dict[b'length'] if b'length' in self.info_dict \
-				else sum([int(f[b'length']) for f in self.info_dict[b'files']])
-		self.piece_length = self.info_dict[b'peice length']
+		self.length = int(self.info_dict[b'length']) if b'length' in self.info_dict \
+				else sum([int((f[b'length'])) for f in self.info_dict[b'files']])
+		self.piece_length = int(self.info_dict[b'piece length'])
 		self.pieces = self.info_dict[b'pieces']
+		self.number_of_pieces = math.ceil(self.length/self.piece_length)
 		self.tracker_info = self.get_info_from_tracker()
 		self.peer_info = self.tracker_info[b'peers']
 		self.peers = self.get_peers()
 		self.tracker_id = None
-		self.have = [0]*int(self.pieces)
+		self.have = [0] * self.number_of_pieces
 
 	def downloaded(self):
 		pass
@@ -51,7 +53,6 @@ class Torrent():
 		'peer_id': self.peer_id,
 		'port': self.port,
 		'left': self.left,
-		'compact': 0,
 		}
 
 	def get_info_from_tracker(self):
@@ -64,10 +65,10 @@ class Torrent():
 			
 	def get_peers(self):
 		if isinstance(self.peer_info, list):
-			peer_list = [peer.Peer(peer_dict[ip], peer_dict[port])for peer_dict in self.peer_info]
+			peer_list = [peer.Peer(peer_dict[ip], peer_dict[port], self.number_of_pieces)for peer_dict in self.peer_info]
 		else:
 			peers = [self.peer_info[i:i+6] for i in range(0, len(self.peer_info), 6)]
-			peer_list = [peer.Peer('.'.join(str(i) for i in p[:4]), int.from_bytes(p[4:], byteorder='big')) for p in peers]
+			peer_list = [peer.Peer('.'.join(str(i) for i in p[:4]), int.from_bytes(p[4:], byteorder='big'), self.number_of_pieces) for p in peers]
 		return peer_list
 
 # torrent = Torrent('tristanandisolda16250gut_archive.torrent')

@@ -23,9 +23,9 @@ class Manager():
 	def main(self):
 		loop = asyncio.get_event_loop()
 		peer = self.torrent.peers[0]
-		# for peer in self.torrent.peers:
-		# 	loop.create_task(self.add_peer(peer))
-		loop.create_task(self.add_peer(peer))
+		for peer in self.torrent.peers:
+			loop.create_task(self.add_peer(peer))
+		# loop.create_task(self.add_peer(peer))
 		loop.run_forever()
 		
 
