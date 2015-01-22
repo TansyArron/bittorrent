@@ -1,6 +1,7 @@
 import sys
 import torrent
 import asyncio
+import traceback
 
 class Manager():
 	def __init__(self, torrent_file):
@@ -15,6 +16,7 @@ class Manager():
 			yield from result
 			self.connected_peers.append(peer)
 		except Exception as e:
+			traceback.print_exc()
 			print('peer {} failed to connect. Exception: "{}"'.format(peer, e))
 
 	def remove_peer(self):
