@@ -70,15 +70,25 @@ DONE -	Create manager object:
 				connect with available peers
 				keep torrenting.
 
-manage pieces from multiple peers:
-	what if pieces arrive out of order?
-	how to choose next piece?
-	self.in_progress = []?
-	self.downloaded = [False, False, ...]
-manage peer has useful pieces but not piece [0]
-remove peers from managers connected list if:
-	they have no useful pieces
-	the connection fails
+
+DONE-	manage pieces from multiple peers:
+	DONE-	what if pieces arrive out of order?
+	DONE-	how to choose next piece? But not optimized
+	DONE-	manage peer has useful pieces but not piece [0]
+
+DONE- remove peers from managers connected list if:
+			they have no useful pieces
+			the connection fails
+
+DONE- Make peer.listen() happen as peers connect. Currently all peers connect
+	 asynchronously, and THEN peer.listen() happens. Maybe. 
+
+Fix get_next_piece. WHY does it always want piece 0???
+
+
+
+
+
 
 		
 

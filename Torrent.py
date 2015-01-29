@@ -8,9 +8,10 @@ import math
 import os
 
 class Torrent():
-	def __init__(self, torrent_file, remove_peer_callback):
+	def __init__(self, torrent_file, remove_peer_callback, start_listener_callback):
 		with open(torrent_file, 'rb') as f:
 			self.torrent_file = f.read()
+		self.start_listener_callback = start_listener_callback
 		self.meta_info_dict = bencoding.decode(self.torrent_file)
 		self.announce = self.meta_info_dict[b'announce'].decode('utf-8')
 		self.info_dict = self.meta_info_dict[b'info']
@@ -25,7 +26,7 @@ class Torrent():
 		self.piece_length = int(self.info_dict[b'piece length'])
 		self.pieces = self.info_dict[b'pieces']
 		self.number_of_pieces = math.ceil(self.length/self.piece_length)
-		print('num of pieces', self.number_of_pieces)
+		self.downloaded = 0
 		self.have = [False] * self.number_of_pieces #TODO: pass torrent class a bitfield and handle restarting torrents
 		self.tracker_info = self.get_info_from_tracker()
 		self.peer_info = self.tracker_info[b'peers']
@@ -39,14 +40,12 @@ class Torrent():
 			'check_piece' : self.check_piece_callback,
 			'pieces_changed' : self.pieces_changed_callback,
 		}
-		# self.pieces_needed = self.update_pieces_needed()
-
-	@property	
-	def downloaded(self):
-		return self.number_of_pieces - len(self.pieces_needed)
+		self.pieces_needed = []
 
 	@property
 	def get_directory(self):
+		'''TODO: add handling for multiple file torrents
+		'''
 		if not os.path.exists(self.path):
 			os.makedirs(self.path)
 		return self.path
@@ -85,30 +84,34 @@ class Torrent():
 			
 	def get_peers(self):
 		if isinstance(self.peer_info, list):
-			peer_list = [peer.Peer(peer_dict[ip], peer_dict[port], self.number_of_pieces, self.pieces_changed_callback, self.check_piece_callback)for peer_dict in self.peer_info]
+			peer_list = [peer.Peer(peer_dict[ip], peer_dict[port], self.number_of_pieces, self.pieces_changed_callback, self.check_piece_callback, self.start_listener_callback)for peer_dict in self.peer_info]
 		else:
 			peers = [self.peer_info[i:i+6] for i in range(0, len(self.peer_info), 6)]
-			peer_list = [peer.Peer('.'.join(str(i) for i in p[:4]), int.from_bytes(p[4:], byteorder='big'), self.number_of_pieces, self.pieces_changed_callback, self.check_piece_callback) for p in peers]
+			peer_list = [peer.Peer('.'.join(str(i) for i in p[:4]), int.from_bytes(p[4:], byteorder='big'), self.number_of_pieces, self.pieces_changed_callback, self.check_piece_callback, self.start_listener_callback) for p in peers]
 		return peer_list
 
-	@property
-	def pieces_needed(self):
-		pieces_needed = []
+	def update_pieces_needed(self):
+		'''	Search self.have for pieces not yet recieved and add them to list. 
+			If all pieces are accounted for, stop the io_loop and change self.complete
+			to True
+		'''
+		self.pieces_needed = []
 		for index, value in enumerate(self.have):
 			if not value:
-				pieces_needed.append(index)
-		if not pieces_needed:
+				self.pieces_needed.append(index)
+		if not self.pieces_needed:
 			self.complete = True
 			self.io_loop.stop()
-		return pieces_needed
+			print("DONE!!!!!")
 
 	def pieces_changed_callback(self, peer):
 		'''	Check if connected peer has pieces I need. Send interested message.
 			Call choose_piece.
 			If peer has no pieces I need, disconnect and remove from peers list.
 		'''
-		for piece in self.pieces_needed:
-			if peer.has_pieces[piece]:
+		self.update_pieces_needed()
+		for i in self.pieces_needed:
+			if peer.has_pieces[i]:
 				self.io_loop.create_task(peer.send_message(2))
 				self.choose_piece(peer)	
 				break
@@ -120,6 +123,7 @@ class Torrent():
 		next_piece_index = self.pieces_needed[0]
 		piece_index_bytes = (next_piece_index).to_bytes(4, byteorder='big')
 		self.have[next_piece_index] = True
+		self.update_pieces_needed()
 		piece_begin = (0).to_bytes(4, byteorder='big')
 		piece_length = (16384).to_bytes(4, byteorder='big')
 		piece_id = b''.join([piece_index_bytes, piece_begin, piece_length])
@@ -130,24 +134,24 @@ class Torrent():
 
 	def check_piece(self, piece, piece_index_bytes, peer):
 		'''	hash a received piece and check against relevent hash provided in 
-			.torrent file.
-			write the piece to file. Update self.have.
-			else, return the piece index to the queue and choose the next piece. 
+			.torrent file. Write the piece to file. Update self.downloaded.
+			call choose_piece
+			else, set self.have[piece_index] to False and choose the next piece. 
 		'''
 		piece_index = int.from_bytes(piece_index_bytes, byteorder='big')
-		print('RECEIVED PIECE:', piece_index)
 		received_hash = hashlib.sha1(piece).digest()
 		hash_from_info = self.pieces[piece_index * 20:(1 + piece_index) * 20]
 		if received_hash == hash_from_info:
 			self.write_piece(piece, piece_index)
+			self.downloaded += 1
 			self.choose_piece(peer)
 		else:
-			self.pieces_needed.append(piece_index)
+			print('PIECE AT INDEX {} DOES NOT MATCH HASH'.format(piece_index))
 			self.have[piece_index] = False
 			self.choose_piece(peer)
 
 	def write_piece(self, piece, piece_index):
-		print(type(piece_index))
+		print('Writing piece {} to file'.format(piece_index))
 		offset = piece_index * self.piece_length
 		try:
 			with open(os.path.join(self.get_directory, self.filename), 'rb+') as torrent_file:

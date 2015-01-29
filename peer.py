@@ -3,7 +3,7 @@ import sys
 import asyncio
 
 class Peer():
-	def __init__(self, ip, port, number_of_pieces, pieces_changed_callback, check_piece_callback):
+	def __init__(self, ip, port, number_of_pieces, pieces_changed_callback, check_piece_callback, start_listener_callback):
 		self.IP = ip
 		self.port = port
 		# choke: <len=0001><id=0>, unchoke: <len=0001><id=1>, interested: <len=0001><id=2>, not interested: <len=0001><id=3>, have: <len=0005><id=4><piece index>, bitfield: <len=0001+X><id=5><bitfield>, request: <len=0013><id=6><index><begin><length>, piece: <len=0009+X><id=7><index><begin><block>, cancel: <len=0013><id=8><index><begin><length>, port: <len=0003><id=9><listen-port>
@@ -33,6 +33,7 @@ class Peer():
 		self.buffer = b''
 		self.pieces_changed_callback = pieces_changed_callback
 		self.check_piece_callback = check_piece_callback
+		self.start_listener_callback = start_listener_callback
 		self.io_loop = asyncio.get_event_loop()
 
 	@asyncio.coroutine
@@ -40,9 +41,8 @@ class Peer():
 		self.message = message
 		self.sock.setblocking(0)
 		yield from self.io_loop.sock_connect(self.sock, (self.IP, self.port))
-		print('PEER CONNECTED')
+		# print('PEER CONNECTED')
 		yield from self.io_loop.sock_sendall(self.sock, message)
-		print('HANDSHAKE SENT')
 		while len(self.buffer) < 68:
 			message_bytes = yield from self.io_loop.sock_recv(self.sock, 4096)
 			if not message_bytes:
@@ -54,7 +54,6 @@ class Peer():
 
 	@asyncio.coroutine
 	def listen(self):
-		# print('self.buffer:', self.buffer)
 		def dispatch_messages_from_buffer():
 			while True:
 				if len(self.buffer) >= 4:
@@ -88,8 +87,8 @@ class Peer():
 		big-endian value. The message ID is a single decimal byte. 
 		The payload is message dependent.
 		'''
+		# print('CONSTRUCTING MESSAGE')
 		length_bytes = (1 + len(payload_bytes)).to_bytes(4, byteorder='big')
-		# print(length_bytes)
 		message_id_bytes = message_id.to_bytes(1, byteorder='big')
 		elements = [length_bytes, message_id_bytes, payload_bytes]
 		message_bytes = b''.join(elements)
@@ -97,11 +96,9 @@ class Peer():
 
 	@asyncio.coroutine
 	def send_message(self, message_id, payload_bytes=b''):
-		# print('constructing message')
+		# print("SENDING MESSAGE TYPE:", self.message_ID_to_func_name[message_id])
 		message = self.construct_message(message_id, payload_bytes)
-		# print('MESSAGE', message)
 		yield from self.io_loop.sock_sendall(self.sock, message)
-		# print('message sent')
 		if message_id in [0,1,2,3]:
 			self.update_state(message_id)
 
@@ -121,15 +118,19 @@ class Peer():
 		'''
 		message_id = message_bytes[0]
 		message_slice = message_bytes[1:]
+		# print('RECIEVED MESSAGE TYPE:', self.message_ID_to_func_name[message_id])
 		self.message_ID_to_func_name[message_id](message_slice)
 
 	def check_handshake(self, handshake_bytes):
-		print('CHECKING HANDSHAKE')
+		# print('CHECKING HANDSHAKE')
 		if handshake_bytes[28:48] != self.message[28:48]:
 			self.sock.close()
 			raise Exception('Peer returned invalid info_hash. Closing socket')	
+			# remove peer from torrent.peer_list and manager.connected_peers
 		else:
 			self.connected = True
+			# print('call it back')
+			self.io_loop.create_task(self.listen())
 			self.buffer = self.buffer[68:]
 
 	def keep_alive(self):
@@ -140,7 +141,6 @@ class Peer():
 		self.state['peer_choking'] = True 
 			
 	def unchoke(self, message_bytes):
-		print('peer unchoking')
 		self.state['peer_choking'] = False
 		
 	def interested(self, message_bytes):
@@ -151,26 +151,24 @@ class Peer():
 		
 	def have(self, message_bytes):
 		piece_index = int.from_bytes(message_bytes, byteorder='big')
-		print('PEER HAS PIECE AT INDEX:', piece_index)
+		# print('PEER HAS PIECE AT INDEX:', piece_index)
 		self.has_pieces[piece_index] = True
-		
 		
 	def bitfield(self, message_bytes):
 		bitstring = ''.join('{0:08b}'.format(byte) for byte in message_bytes)
 		self.has_pieces = [bool(int(c)) for c in bitstring]
-		print('PEER HAS PIECES:', self.has_pieces)
+		# print('PEER HAS PIECES:', self.has_pieces)
 		self.pieces_changed_callback(self)
 		
 	def request(self, message_bytes):
 		pass
 		
 	def piece(self, message_bytes):
-
 		piece_index = message_bytes[:4]
 		piece_begins = message_bytes[4:8]
 		piece = message_bytes[8:]
 		self.check_piece_callback(piece, piece_index, self)
-		pass
+	
 		#piece: <len=0009+X><id=7><index><begin><block>,
 	def cancel(self, message_bytes):
 		pass
