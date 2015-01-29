@@ -71,7 +71,7 @@ class Torrent():
 		'peer_id': self.peer_id,
 		'port': self.port,
 		'left': self.left,
-		'compact': '0',
+		# 'compact': '0',
 		}
 
 	def get_info_from_tracker(self):

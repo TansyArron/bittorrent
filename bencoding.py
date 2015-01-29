@@ -1,11 +1,14 @@
 '''Bencoding for BitTorrent.
-spec can be found here:
+
+string: 	<integer length><:><string>
+integer:	<i><integer><e>
+list: 		<l><list><e>
+dictionary: <d><sorted dictionary><e>
+
+Full spec can be found here:
 https://wiki.theory.org/BitTorrentSpecification#Bencoding
 '''
 
-
-'''ENCODER
-'''
 class BencodeError(Exception):
 	def __init__(self, mode, value, data):
 		self.mode = mode
@@ -14,6 +17,10 @@ class BencodeError(Exception):
 
 	def __str__(self):
 		return 'mode: {self.mode}\nvalue: {self.value}\ndata: {self.data}'.format(self=self)
+
+
+'''ENCODER
+'''
 
 def encode_int(i):
 	# Int = i+int+e
@@ -56,7 +63,7 @@ def decode_int(byte_string):
 	int_re = re.compile(rb'[i](?P<digits>-?\d+)[e]')
 	match = int_re.match(byte_string)
 	if not match:
-		raise BencodeError("Not a match", "Expected 'i' <some digits> 'e', received:", byte_string[:10])
+		raise BencodeError("Decode Int", "Expected 'i' <some digits> 'e', received:", byte_string[:10])
 	digits = match.group('digits')
 	int_len = len(digits)
 	int_bytes_start = 1
@@ -69,7 +76,7 @@ def decode_string(byte_string):
 	string_re = re.compile(rb'(?P<digits>\d+):')
 	match = string_re.match(byte_string)
 	if not match:
-		raise BencodeError("Not a match", "Expected <some digits> ':' <some string>, recieved:", byte_string[:10])
+		raise BencodeError("Decode String", "Expected <some digits> ':' <some string>, recieved:", byte_string[:10])
 	digits = match.group('digits')
 	str_len = int(digits)
 	str_bytes_start = 1+len(digits)
@@ -106,12 +113,11 @@ def type_handler(byte_string):
 	elif byte_string[:1] in b'123456789':						
 		return decode_string(byte_string)
 	else:
-		raise BencodeError("Malformed data", "Expected d, l, i or int. recieved:", byte_string[:10])
+		raise BencodeError("Type Handler", "Expected d, l, i or int. recieved:", byte_string[:10])
 
 def decode(byte_string):
 	dict_check = re.compile(rb'(^d)')
 	match = dict_check.match(byte_string)
 	if not match:
-		print("byte_string begins:", byte_string)
-		raise BencodeError("Malformed data.", "File does not start with dictionary", byte_string[:10])
+		raise BencodeError("Decode", "Malformed Data", byte_string)
 	return type_handler(byte_string)[0]
