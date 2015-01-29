@@ -25,13 +25,13 @@ def encode_string(s):
 
 def encode_list(l):
 	# Lists = l+(bencoded elements)+e
-	encoded_str = ''.join(encode(x) for x in l)
+	encoded_str = ''.join(bencode(x) for x in l)
 	return 'l{}e'.format(encoded_str)
 
 def encode_dict(d):
 	# Dictionaries = d+(bencoded elements)+e. 
 	# Keys must be strings and appear in sorted order
-	dictionary = [encode_string(key) + encode(d[key]) for key in sorted(d.keys())]
+	dictionary = [encode_string(key) + bencode(d[key]) for key in sorted(d.keys())]
 	return 'd{}e'.format(''.join(dictionary))
 
 encode_functions = {
@@ -108,7 +108,7 @@ def type_handler(byte_string):
 	else:
 		raise BencodeError("Malformed data", "Expected d, l, i or int. recieved:", byte_string[:10])
 
-def bdecoder(byte_string):
+def decode(byte_string):
 	dict_check = re.compile(rb'(^d)')
 	match = dict_check.match(byte_string)
 	if not match:

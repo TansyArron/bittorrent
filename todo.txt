@@ -44,12 +44,12 @@ DONE -	Create peer object:
 			peer_ID 
 			IP
 			Port
-		#	State (choke etc?)
-		#	message handling
+			State (choke etc?)
+			message handling
 			create socket
-		#	perform and check handshake
-		# 	parse bitfield or Have messages
-		#	update peer.has
+			perform and check handshake
+		 	parse bitfield or Have messages
+			update peer.has
 
 DONE -	Create torrent object:
 			file size
@@ -57,8 +57,10 @@ DONE -	Create torrent object:
 			create new peer if peer form is {peerID:(IP, port)}
 			peice size
 			announce url
-		#	check file peices against hash
-		#	get next block
+			hash list
+			check file peices against hash
+			write piece to file
+			get next block
 			update tracker info
 
 DONE -	Create manager object:
@@ -68,6 +70,15 @@ DONE -	Create manager object:
 				connect with available peers
 				keep torrenting.
 
+manage pieces from multiple peers:
+	what if pieces arrive out of order?
+	how to choose next piece?
+	self.in_progress = []?
+	self.downloaded = [False, False, ...]
+manage peer has useful pieces but not piece [0]
+remove peers from managers connected list if:
+	they have no useful pieces
+	the connection fails
 
 		
 

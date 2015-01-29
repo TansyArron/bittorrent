@@ -3,13 +3,14 @@ import sys
 import asyncio
 
 class Peer():
-	def __init__(self, ip, port, number_of_peices):
+	def __init__(self, ip, port, number_of_pieces, pieces_changed_callback, check_piece_callback):
 		self.IP = ip
 		self.port = port
 		# choke: <len=0001><id=0>, unchoke: <len=0001><id=1>, interested: <len=0001><id=2>, not interested: <len=0001><id=3>, have: <len=0005><id=4><piece index>, bitfield: <len=0001+X><id=5><bitfield>, request: <len=0013><id=6><index><begin><length>, piece: <len=0009+X><id=7><index><begin><block>, cancel: <len=0013><id=8><index><begin><length>, port: <len=0003><id=9><listen-port>
 		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		self.connected = False
 		self.handshake_bytes = None
-		self.has_pieces = [False] * number_of_peices
+		self.has_pieces = [False] * number_of_pieces
 		self.state = {
 				'am_choking' : True,
 				'am_interested' : False,
@@ -29,51 +30,57 @@ class Peer():
 			8: self.cancel, 
 			9: self.port,
 		}
+		self.buffer = b''
+		self.pieces_changed_callback = pieces_changed_callback
+		self.check_piece_callback = check_piece_callback
+		self.io_loop = asyncio.get_event_loop()
 
 	@asyncio.coroutine
 	def connect(self, message):
 		self.message = message
-		io_loop = asyncio.get_event_loop()
 		self.sock.setblocking(0)
-		yield from io_loop.sock_connect(self.sock, (self.IP, self.port))
-		yield from io_loop.sock_sendall(self.sock, message)
-		buf = b''
-		while len(buf) < 68:
-			message_bytes = yield from io_loop.sock_recv(self.sock, 4096)
+		yield from self.io_loop.sock_connect(self.sock, (self.IP, self.port))
+		print('PEER CONNECTED')
+		yield from self.io_loop.sock_sendall(self.sock, message)
+		print('HANDSHAKE SENT')
+		while len(self.buffer) < 68:
+			message_bytes = yield from self.io_loop.sock_recv(self.sock, 4096)
 			if not message_bytes:
 				raise Exception("Socket closed unexpectedly while receiving hanshake")
-			buf += message_bytes
-		self.check_handshake(buf[:68])
-		buf = buf[68:]
-		print('buffer:', buf)
+			# print('RECIEVED BYTES:', message_bytes)
+			self.buffer += message_bytes
+		self.check_handshake(self.buffer[:68])
 
-		def dispatch_messages_from_buf(buf):
+
+	@asyncio.coroutine
+	def listen(self):
+		# print('self.buffer:', self.buffer)
+		def dispatch_messages_from_buffer():
 			while True:
-				if len(buf) >= 4:
-					message_length = int.from_bytes(buf[:4], byteorder='big')
-					print('message length:', message_length)
+				if len(self.buffer) >= 4:
+					message_length = int.from_bytes(self.buffer[:4], byteorder='big')
 					if message_length == 0:
 						self.keep_alive()
-						buf = buf[4:]
-					elif len(buf[4:]) >= message_length:
-						message = buf[4:message_length+4]
+						self.buffer = self.buffer[4:]
+					elif len(self.buffer[4:]) >= message_length:
+						message = self.buffer[4:message_length+4]
 						self.dispatch_message(message)
-						buf = buf[message_length+4:]
+						self.buffer = self.buffer[message_length+4:]
 					else:
-						return buf	
+						return self.buffer	
 				else:
-					return buf
+					return self.buffer
 
-		while True:
-			buf = dispatch_messages_from_buf(buf)
-			print('before')
-			message_bytes = yield from io_loop.sock_recv(self.sock, 4096)
-			print('after')
+		while self.connected:
+			dispatch_messages_from_buffer()
+			message_bytes = yield from self.io_loop.sock_recv(self.sock, 4096)
+			# print('RECIEVED BYTES:', message_bytes)
 			if not message_bytes:
 				raise Exception("Socket closed unexpectedly while receiving message")
-			print('message_bytes, adding to buffer:', message_bytes)
-			buf += message_bytes
-
+				self.sock.close
+				self.connected = False
+			# print('message_bytes, adding to buffer:', message_bytes)
+			self.buffer += message_bytes
 
 	def construct_message(self, message_id, payload_bytes=b''):
 		'''messages in the protocol take the form of 
@@ -81,22 +88,31 @@ class Peer():
 		big-endian value. The message ID is a single decimal byte. 
 		The payload is message dependent.
 		'''
-		length_bytes = (1 + len(payload)).to_bytes(4, byteorder='big')
+		length_bytes = (1 + len(payload_bytes)).to_bytes(4, byteorder='big')
+		# print(length_bytes)
 		message_id_bytes = message_id.to_bytes(1, byteorder='big')
 		elements = [length_bytes, message_id_bytes, payload_bytes]
 		message_bytes = b''.join(elements)
 		return message_bytes
 
-	def send_message_and_update_state(self, message_id):
-		# message = self.construct_message(message_id)
-		# yield from io_loop.sock_sendall(self.sock, message)
-		if message_id == '0':
+	@asyncio.coroutine
+	def send_message(self, message_id, payload_bytes=b''):
+		# print('constructing message')
+		message = self.construct_message(message_id, payload_bytes)
+		# print('MESSAGE', message)
+		yield from self.io_loop.sock_sendall(self.sock, message)
+		# print('message sent')
+		if message_id in [0,1,2,3]:
+			self.update_state(message_id)
+
+	def update_state(self, message_id):
+		if message_id == 0:
 			self.state['am_choking'] = True
-		elif message_id == '1':
+		elif message_id == 1:
 			self.state['am_choking'] = False
-		elif message_id == '2':
+		elif message_id == 2:
 			self.state['am_interested'] = True
-		elif message_id == '3':
+		elif message_id == 3:
 			self.state['am_interested'] = False
 
 	def dispatch_message(self, message_bytes):
@@ -108,19 +124,23 @@ class Peer():
 		self.message_ID_to_func_name[message_id](message_slice)
 
 	def check_handshake(self, handshake_bytes):
+		print('CHECKING HANDSHAKE')
 		if handshake_bytes[28:48] != self.message[28:48]:
 			self.sock.close()
-			raise Exception('Peer returned invalid info_hash. Closing socket')
-		print('Handshake Bytes:', handshake_bytes)	
+			raise Exception('Peer returned invalid info_hash. Closing socket')	
+		else:
+			self.connected = True
+			self.buffer = self.buffer[68:]
 
 	def keep_alive(self):
-		# TODO: update time/state
+		print('KEEP ALIVE')# TODO: update time/state
 		pass
 
 	def choke(self, message_bytes):
 		self.state['peer_choking'] = True 
 			
 	def unchoke(self, message_bytes):
+		print('peer unchoking')
 		self.state['peer_choking'] = False
 		
 	def interested(self, message_bytes):
@@ -131,23 +151,25 @@ class Peer():
 		
 	def have(self, message_bytes):
 		piece_index = int.from_bytes(message_bytes, byteorder='big')
-		print('piece_index', piece_index)
-		print(self.has_pieces[piece_index])
+		print('PEER HAS PIECE AT INDEX:', piece_index)
 		self.has_pieces[piece_index] = True
 		
+		
 	def bitfield(self, message_bytes):
-		print("parsing bitfield")
 		bitstring = ''.join('{0:08b}'.format(byte) for byte in message_bytes)
 		self.has_pieces = [bool(int(c)) for c in bitstring]
-		print("has_pieces:", self.has_pieces)
+		print('PEER HAS PIECES:', self.has_pieces)
+		self.pieces_changed_callback(self)
 		
 	def request(self, message_bytes):
 		pass
 		
 	def piece(self, message_bytes):
-		'''TODO:
-		THIS ONE NEXT
-		'''
+
+		piece_index = message_bytes[:4]
+		piece_begins = message_bytes[4:8]
+		piece = message_bytes[8:]
+		self.check_piece_callback(piece, piece_index, self)
 		pass
 		#piece: <len=0009+X><id=7><index><begin><block>,
 	def cancel(self, message_bytes):
