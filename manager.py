@@ -18,8 +18,8 @@ class Manager():
 		
 
 	def remove_peer_callback(self, peer):
-		torrent.peer.sock.close()
-		torrent.peer_list.remove(peer)
+		self.torrent.peer.sock.close()
+		self.torrent.peer_list.remove(peer)
 		self.connected_peers.remove(peer)
 
 	@asyncio.coroutine
@@ -27,7 +27,7 @@ class Manager():
 		for peer in self.torrent.peers:
 			try:
 				print('CONNECTING')
-				yield from peer.connect(self.torrent.handshake)
+				self.loop.create_task(peer.connect(self.torrent.handshake))
 				self.connected_peers.append(peer)
 			except Exception as e:
 				traceback.print_exc()

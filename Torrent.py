@@ -6,6 +6,7 @@ import requests
 import asyncio
 import math
 import os
+import json
 
 class Torrent():
 	def __init__(self, torrent_file, remove_peer_callback, start_listener_callback):
@@ -20,6 +21,7 @@ class Torrent():
 		self.path = 'torrents_in_progress'
 		self.info_hash = hashlib.sha1(self.bencoded_info_dict).digest()
 		self.peer_id = '-'.join(['','TZ', '0000', str(random.randrange(10000000000,99999999999))])
+		self.ip = self.get_IP_address()
 		self.port =  '6881' #TODO: Try ports in range (6881,6889)
 		self.length = int(self.info_dict[b'length']) if b'length' in self.info_dict \
 				else sum([int((f[b'length'])) for f in self.info_dict[b'files']])
@@ -30,7 +32,7 @@ class Torrent():
 		self.have = [False] * self.number_of_pieces #TODO: pass torrent class a bitfield and handle restarting torrents
 		self.tracker_info = self.get_info_from_tracker()
 		self.peer_info = self.tracker_info[b'peers']
-		self.peers = self.get_peers()
+		self.peers = self.create_peers()
 		self.tracker_id = None
 		self.complete = False #TODO: Update when self.pieces_needed is empty
 		self.io_loop = asyncio.get_event_loop()
@@ -41,6 +43,12 @@ class Torrent():
 			'pieces_changed' : self.pieces_changed_callback,
 		}
 		self.pieces_needed = []
+
+	
+	def get_IP_address(self):
+		response = requests.get('http://api.ipify.org?format=json')
+		ip_object = json.loads(response.text)
+		return ip_object["ip"]
 
 	@property
 	def get_directory(self):
@@ -71,24 +79,39 @@ class Torrent():
 		'peer_id': self.peer_id,
 		'port': self.port,
 		'left': self.left,
-		# 'compact': '0',
+		'compact': '0',
 		}
 
 	def get_info_from_tracker(self):
 		tracker_info = requests.get(self.announce, params=self.get_params(), stream=True).raw.read()
+		print(tracker_info)
 		return bencoding.decode(tracker_info)
 
 	def update_tracker_id(self):
 		if 'tracker_id' in self.tracker_info:
 			self.tracker_id = self.tracker_info['tracker_id']
 			
-	def get_peers(self):
+	def get_peer_address(self):
+		peer_list = []
 		if isinstance(self.peer_info, list):
-			peer_list = [peer.Peer(peer_dict[ip], peer_dict[port], self.number_of_pieces, self.pieces_changed_callback, self.check_piece_callback, self.start_listener_callback)for peer_dict in self.peer_info]
+			for peer in self.peer_info:
+				peer_list.append(peer_dict[ip], peer_dict[port])
+		
 		else:
 			peers = [self.peer_info[i:i+6] for i in range(0, len(self.peer_info), 6)]
-			peer_list = [peer.Peer('.'.join(str(i) for i in p[:4]), int.from_bytes(p[4:], byteorder='big'), self.number_of_pieces, self.pieces_changed_callback, self.check_piece_callback, self.start_listener_callback) for p in peers]
+			for peer in peers:
+				ip = '.'.join(str(i) for i in peer[:4])
+				port = int.from_bytes(peer[4:], byteorder='big')
+				peer_list.append((ip, port))
 		return peer_list
+
+	def create_peers(self):
+		peers = []
+		for p in self.get_peer_address():
+			if p[0] == self.ip:
+				continue
+			peers.append(peer.Peer(p[0], p[1], self.number_of_pieces, self.pieces_changed_callback, self.check_piece_callback, self.start_listener_callback))
+		return peers
 
 	def update_pieces_needed(self):
 		'''	Search self.have for pieces not yet recieved and add them to list. 

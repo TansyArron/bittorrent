@@ -10,24 +10,9 @@ DONE -	Form Get request (announce URL)
 		To contact the tracker a peer MUST send a standard HTTP GET request using the URL in the "announce" entry of the metainfo file. The GET request must be parametrized as specified in the HTTP protocol. The following parameters must be present in the request:
 
 DONE - 	FIX INFOHASH- Currently hard coding a working hash.
- 		Encoding error at byte 71.
-		'info_hash':
-			This is a REQUIRED 20-byte SHA1 hash value. In order to obtain this value the peer must calculate the SHA1 of the value of the "info" key in the metainfo file.
-		'peer_id':
-			This is a REQUIRED string and must contain the 20-byte self-designated ID of the peer.
-		'port':
-			The port number that the peer is listening to for incoming connections from other peers. BTP/1.0 does not specify a standard port number, nor a port range to be used. This key is REQUIRED.
-		'uploaded':
-			This is a base ten integer value. It denotes the total amount of bytes that the peer has uploaded in the swarm since it sent the "started" event to the tracker. This key is REQUIRED.
-		'downloaded':
-			This is a base ten integer value. It denotes the total amount of bytes that the peer has downloaded in the swarm since it sent the "started" event to the tracker. This key is REQUIRED.
-		'left':
-			This is a base ten integer value. It denotes the total amount of bytes that the peer needs in this torrent in order to complete its download. This key is REQUIRED.
-		
 DONE -	Receive text file
 DONE -	bdecode text file
 DONE -	parse IP address of peer(s)
-
 DONE -	Connect with seed (just one, to start)
 
 DONE -	Handshake:
@@ -70,11 +55,10 @@ DONE -	Create manager object:
 				connect with available peers
 				keep torrenting.
 
-
 DONE-	manage pieces from multiple peers:
-	DONE-	what if pieces arrive out of order?
-	DONE-	how to choose next piece? But not optimized
-	DONE-	manage peer has useful pieces but not piece [0]
+		what if pieces arrive out of order?
+		how to choose next piece? 
+		manage peer has useful pieces but not piece [0]
 
 DONE- remove peers from managers connected list if:
 			they have no useful pieces
@@ -83,21 +67,26 @@ DONE- remove peers from managers connected list if:
 DONE- Make peer.listen() happen as peers connect. Currently all peers connect
 	 asynchronously, and THEN peer.listen() happens. Maybe. 
 
-Fix get_next_piece. WHY does it always want piece 0???
+	 	Optimize get_next_piece
+	 	create torrent.have from half done torrent and re start
 
 
 
+		SEED A FILE	
 
-
-
+DONE - 	write bencode
 		
+		create bitfield from file/meta_info or use torrent.have
+		create a file of infohash:(file path, metainfo)
+		construct 'have' messages
+		construct bitfield messages - from file or from torrent.have
+		listen for peers
+		respond to piece requests
+
+	
 
 
-
-
-
-SEED A FILE	/ CREATE A .TORRENT
-	DONE - write bencode
+CREATE A .TORRENT
 	split file into chunks and identify chunks using Hashes.
 	create info_dict
 	bencode info_dict

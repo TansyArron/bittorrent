@@ -43,6 +43,7 @@ class Peer():
 
 	@asyncio.coroutine
 	def connect(self, message):
+
 		self.message = message
 		self.sock.setblocking(0)
 		yield from self.io_loop.sock_connect(self.sock, (self.IP, self.port))
@@ -69,7 +70,7 @@ class Peer():
 		''' Listen for messages from socket
 		'''
 		while self.connected:
-			dispatch_messages_from_buffer()
+			self.dispatch_messages_from_buffer()
 			message_bytes = yield from self.io_loop.sock_recv(self.sock, 4096)
 			if not message_bytes:
 				raise Exception("Socket closed unexpectedly while receiving message")
@@ -77,7 +78,7 @@ class Peer():
 				self.connected = False
 			self.buffer += message_bytes
 
-	def dispatch_messages_from_buffer():
+	def dispatch_messages_from_buffer(self):
 		''' First four bytes of each message are an indication of length. 
 			Wait until full message has been recieved and then send relevent
 			bytes to dispatch_message. If length is 0000, message is "keep alive"
@@ -149,6 +150,7 @@ class Peer():
 		piece_index = message_bytes[:4]
 		piece_begins = message_bytes[4:8]
 		piece = message_bytes[8:]
+		print(piece)
 		self.check_piece_callback(piece, piece_index, self)
 	
 		#piece: <len=0009+X><id=7><index><begin><block>,
