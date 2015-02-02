@@ -141,7 +141,11 @@ class Peer():
 		self.pieces_changed_callback(self)
 		
 	def request(self, message_bytes):
+		index = message_bytes[:4]
+		piece_offset = message_bytes[4:8]
+		length = message_bytes[8:]
 		pass
+		# request: <len=0013><id=6><index><begin><length>
 		
 	def piece(self, message_bytes):
 		''' Piece message is constructed:
@@ -150,7 +154,7 @@ class Peer():
 		piece_index = message_bytes[:4]
 		piece_begins = message_bytes[4:8]
 		piece = message_bytes[8:]
-		print(piece)
+		# print(piece)
 		self.check_piece_callback(piece, piece_index, self)
 	
 		#piece: <len=0009+X><id=7><index><begin><block>,
@@ -161,6 +165,9 @@ class Peer():
 		pass
 		#port: <len=0003><id=9><listen-port>
 
+	def construct_payload(self, message_id):
+		pass
+			
 	def construct_message(self, message_id, payload_bytes=b''):
 		'''messages in the protocol take the form of 
 		<length prefix><message ID><payload>. The length prefix is a four byte 

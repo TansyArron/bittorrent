@@ -60,16 +60,16 @@ class Torrent():
 
 	@property	
 	def handshake(self):
+		''' construct handshake bytestring in form:
+			<19><'BitTorrent protocol'><00000000><ID>
+			Spec here: https://wiki.theory.org/BitTorrentSpecification#Handshake
+		'''
 		pstrlen = b'\x13'
 		pstr = b'BitTorrent protocol'
 		reserved = b'\x00\x00\x00\x00\x00\x00\x00\x00'
 		parts = [pstrlen, pstr, reserved, self.info_hash, self.peer_id.encode()]
 		handshake_string = b''.join(parts)
 		return handshake_string
-			
-	@property
-	def left(self):
-		return int(self.length) - self.downloaded
 
 	def get_params(self):
 		return {
@@ -83,21 +83,39 @@ class Torrent():
 		}
 
 	def get_info_from_tracker(self):
+		'''	Construct tracker request and return decoded response.
+			Spec here: https://wiki.theory.org/BitTorrentSpecification#Tracker_Request_Parameters
+		'''
 		tracker_info = requests.get(self.announce, params=self.get_params(), stream=True).raw.read()
-		print(tracker_info)
+		# print(tracker_info)
 		return bencoding.decode(tracker_info)
 
 	def update_tracker_id(self):
+		''' if the tracker sends an ID, update tracker_id. This is used for ongoing communication
+			with tracker while seeding.
+		'''
 		if 'tracker_id' in self.tracker_info:
 			self.tracker_id = self.tracker_info['tracker_id']
 			
 	def get_peer_address(self):
+		''' The tracker response contains the IPs and ports for active peers. 
+			These can be in two forms:
+			Dictionary model: A list of dictionaries, each with the following keys:
+				peer id: peer's self-selected ID, as described above for the tracker request (string)
+				ip: peer's IP address either IPv6 (hexed) or IPv4 (dotted quad) or DNS name (string)
+				port: peer's port number (integer)
+			Binary model: Instead of using the dictionary model described above, the peers value 
+				may be a string consisting of multiples of 6 bytes. First 4 bytes are the IP address 
+				and last 2 bytes are the port number. All in network (big endian) notation.
+		'''		
 		peer_list = []
 		if isinstance(self.peer_info, list):
+			# Dictionary Model
 			for peer in self.peer_info:
 				peer_list.append(peer_dict[ip], peer_dict[port])
 		
 		else:
+			# Binary Model
 			peers = [self.peer_info[i:i+6] for i in range(0, len(self.peer_info), 6)]
 			for peer in peers:
 				ip = '.'.join(str(i) for i in peer[:4])
@@ -143,23 +161,30 @@ class Torrent():
 		# TODO except if peer has no needed pieces and disconnect.
 
 	def choose_piece(self, peer):
-		next_piece_index = self.pieces_needed[0]
-		piece_index_bytes = (next_piece_index).to_bytes(4, byteorder='big')
+		'''	Finds the next needed piece, updates self.have and self.pieces_needed.
+			calls construct_request_payload.
+		'''
+		piece_index = self.pieces_needed[0]
 		self.have[next_piece_index] = True
 		self.update_pieces_needed()
+		self.construct_request_payload(piece_index)
+
+	def construct_request_payload(self, piece_index):
+		'''	Constructs the payload of a request message for piece_index.
+			Calls peer.send_message to finish construction and send.
+		'''
+		piece_index_bytes = (piece_index).to_bytes(4, byteorder='big')
 		piece_begin = (0).to_bytes(4, byteorder='big')
 		piece_length = (16384).to_bytes(4, byteorder='big')
-		piece_id = b''.join([piece_index_bytes, piece_begin, piece_length])
-		self.io_loop.create_task(peer.send_message(6, piece_id))	
-			
-	def check_piece_callback(self, piece, piece_index, peer):
-		self.check_piece(piece, piece_index, peer)
+		payload = b''.join([piece_index_bytes, piece_begin, piece_length])
+		self.io_loop.create_task(peer.send_message(6, payload))	
 
-	def check_piece(self, piece, piece_index_bytes, peer):
+	def check_piece_callback(self, piece, piece_index_bytes, peer):
 		'''	hash a received piece and check against relevent hash provided in 
-			.torrent file. Write the piece to file. Update self.downloaded.
-			call choose_piece
-			else, set self.have[piece_index] to False and choose the next piece. 
+			.torrent file. Write the piece to file. Update self.downloaded and
+			choose next piece.
+			If the hashes do not match, set self.have[piece_index] to False and 
+			choose the next piece. 
 		'''
 		piece_index = int.from_bytes(piece_index_bytes, byteorder='big')
 		received_hash = hashlib.sha1(piece).digest()
@@ -174,6 +199,9 @@ class Torrent():
 			self.choose_piece(peer)
 
 	def write_piece(self, piece, piece_index):
+		''' write piece to file in the appropriate location. If the file or path do not exist, 
+			create them.
+		'''
 		print('Writing piece {} to file'.format(piece_index))
 		offset = piece_index * self.piece_length
 		try:
