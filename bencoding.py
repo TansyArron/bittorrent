@@ -59,6 +59,7 @@ def encode(data):
 '''
 import re
 import requests
+
 def decode_int(byte_string):
 	int_re = re.compile(rb'[i](?P<digits>-?\d+)[e]')
 	match = int_re.match(byte_string)
@@ -76,7 +77,9 @@ def decode_string(byte_string):
 	string_re = re.compile(rb'(?P<digits>\d+):')
 	match = string_re.match(byte_string)
 	if not match:
-		raise BencodeError("Decode String", "Expected <some digits> ':' <some string>, recieved:", byte_string[:10])
+		# if byte_string[0] == 0:
+		# 	return '', byte_string[1:]
+		raise BencodeError("Decode String", "Expected <some digits> ':' <some string>, received:", byte_string[:10])
 	digits = match.group('digits')
 	str_len = int(digits)
 	str_bytes_start = 1+len(digits)
@@ -110,7 +113,7 @@ def type_handler(byte_string):
 		return decode_list(byte_string[1:])
 	elif byte_string[0] == ord(b'i'):		
 		return decode_int(byte_string)
-	elif byte_string[:1] in b'123456789':						
+	elif byte_string[:1] in b'0123456789':						
 		return decode_string(byte_string)
 	else:
 		raise BencodeError("Type Handler", "Expected d, l, i or int. recieved:", byte_string[:10])

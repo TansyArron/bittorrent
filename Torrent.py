@@ -9,7 +9,7 @@ import os
 import json
 
 class Torrent():
-	def __init__(self, torrent_file, remove_peer_callback, start_listener_callback):
+	def __init__(self, torrent_file, start_listener_callback):
 		with open(torrent_file, 'rb') as f:
 			self.torrent_file = f.read()
 		self.start_listener_callback = start_listener_callback
@@ -37,10 +37,10 @@ class Torrent():
 		self.complete = False #TODO: Update when self.pieces_needed is empty
 		self.io_loop = asyncio.get_event_loop()
 		self.index = 0
-		self.remove_peer_callback = remove_peer_callback
 		self.callback_dict = {
 			'check_piece' : self.check_piece_callback,
 			'pieces_changed' : self.pieces_changed_callback,
+			'start_listener' : self.start_listener_callback,
 		}
 		self.pieces_needed = []
 
@@ -70,6 +70,10 @@ class Torrent():
 		parts = [pstrlen, pstr, reserved, self.info_hash, self.peer_id.encode()]
 		handshake_string = b''.join(parts)
 		return handshake_string
+			
+	@property
+	def left(self):
+		return int(self.length) - self.downloaded
 
 	def get_params(self):
 		return {
@@ -87,7 +91,8 @@ class Torrent():
 			Spec here: https://wiki.theory.org/BitTorrentSpecification#Tracker_Request_Parameters
 		'''
 		tracker_info = requests.get(self.announce, params=self.get_params(), stream=True).raw.read()
-		# print(tracker_info)
+		print(tracker_info)
+		# print(bencoding.decode(tracker_info))
 		return bencoding.decode(tracker_info)
 
 	def update_tracker_id(self):
@@ -121,6 +126,7 @@ class Torrent():
 				ip = '.'.join(str(i) for i in peer[:4])
 				port = int.from_bytes(peer[4:], byteorder='big')
 				peer_list.append((ip, port))
+		print('peer_list', peer_list)
 		return peer_list
 
 	def create_peers(self):
@@ -128,7 +134,7 @@ class Torrent():
 		for p in self.get_peer_address():
 			if p[0] == self.ip:
 				continue
-			peers.append(peer.Peer(p[0], p[1], self.number_of_pieces, self.pieces_changed_callback, self.check_piece_callback, self.start_listener_callback))
+			peers.append(peer.Peer(p[0], p[1], self))
 		return peers
 
 	def update_pieces_needed(self):
@@ -157,7 +163,7 @@ class Torrent():
 				self.choose_piece(peer)	
 				break
 			else:
-				self.remove_peer_callback(peer)
+				self.peers.remove(peer)
 		# TODO except if peer has no needed pieces and disconnect.
 
 	def choose_piece(self, peer):
@@ -165,11 +171,11 @@ class Torrent():
 			calls construct_request_payload.
 		'''
 		piece_index = self.pieces_needed[0]
-		self.have[next_piece_index] = True
+		self.have[piece_index] = True
 		self.update_pieces_needed()
-		self.construct_request_payload(piece_index)
+		self.construct_request_payload(piece_index, peer)
 
-	def construct_request_payload(self, piece_index):
+	def construct_request_payload(self, piece_index, peer):
 		'''	Constructs the payload of a request message for piece_index.
 			Calls peer.send_message to finish construction and send.
 		'''

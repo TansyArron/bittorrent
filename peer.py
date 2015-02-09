@@ -8,14 +8,15 @@ class Peer():
 		peers, listening for and parsing and acting on messages sent by 
 		the peer, and constructing and sending messages.
 	'''
-	def __init__(self, ip, port, number_of_pieces, pieces_changed_callback, check_piece_callback, start_listener_callback):
+	def __init__(self, ip, port, torrent):
 		self.IP = ip
 		self.port = port
+		self.torrent = torrent
 		# choke: <len=0001><id=0>, unchoke: <len=0001><id=1>, interested: <len=0001><id=2>, not interested: <len=0001><id=3>, have: <len=0005><id=4><piece index>, bitfield: <len=0001+X><id=5><bitfield>, request: <len=0013><id=6><index><begin><length>, piece: <len=0009+X><id=7><index><begin><block>, cancel: <len=0013><id=8><index><begin><length>, port: <len=0003><id=9><listen-port>
 		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.connected = False
 		self.handshake_bytes = None
-		self.has_pieces = [False] * number_of_pieces
+		self.has_pieces = [False] * self.torrent.number_of_pieces
 		self.state = {
 				'am_choking' : True,
 				'am_interested' : False,
@@ -36,9 +37,6 @@ class Peer():
 			9: self.port,
 		}
 		self.buffer = b''
-		self.pieces_changed_callback = pieces_changed_callback
-		self.check_piece_callback = check_piece_callback
-		self.start_listener_callback = start_listener_callback
 		self.io_loop = asyncio.get_event_loop()
 
 	@asyncio.coroutine
@@ -138,13 +136,12 @@ class Peer():
 		bitstring = ''.join('{0:08b}'.format(byte) for byte in message_bytes)
 		self.has_pieces = [bool(int(c)) for c in bitstring]
 		# print('PEER HAS PIECES:', self.has_pieces)
-		self.pieces_changed_callback(self)
+		self.torrent.pieces_changed_callback(self)
 		
 	def request(self, message_bytes):
 		index = message_bytes[:4]
 		piece_offset = message_bytes[4:8]
 		length = message_bytes[8:]
-		pass
 		# request: <len=0013><id=6><index><begin><length>
 		
 	def piece(self, message_bytes):
@@ -154,14 +151,14 @@ class Peer():
 		piece_index = message_bytes[:4]
 		piece_begins = message_bytes[4:8]
 		piece = message_bytes[8:]
-		# print(piece)
-		self.check_piece_callback(piece, piece_index, self)
+		self.torrent.check_piece_callback(piece, piece_index, self)
 	
 		#piece: <len=0009+X><id=7><index><begin><block>,
 	def cancel(self, message_bytes):
 		pass
 		#cancel: <len=0013><id=8><index><begin><length>,
 	def port(self, message_bytes):
+		print('HELP! I HAVE A PORT REQUEST!!!!!')
 		pass
 		#port: <len=0003><id=9><listen-port>
 
