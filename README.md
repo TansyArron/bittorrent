@@ -1,4 +1,22 @@
-Things I've learned so far:
+BitTorrent Client
+
+Command line bitTorrent client written in Python 3.4. Uses asyncio to handle multiple peer connections. Currently handles single file torrents with no protocol extensions. Does not yet seed.
+
+Usage:
+
+python manager.py /path/to/torrent_file.torrent
+
+TODO:
+- Optimize get_next_piece: Currently chooses the lowest indexed piece it 		needs.
+		
+- Create bitfield from file/meta_info or use torrent.have
+- Construct 'have' messages
+- Construct bitfield messages
+- Listen for peers
+- Respond to piece requests: Given index, length and offset within
+		piece, get the requested bytes, form a "piece" message and send to peer
+
+TIL:
 
 Sockets: come in client, server, UDP and TCP varieties. I've coded up one of each and hey! Magic! I can send bytes back and forth to myself, or to others!
 
@@ -8,7 +26,7 @@ Bencoding: A simple way to represent nested data structures as a single string. 
 
 Regex: Regular expressions! These were awesome until I realised that there was an easier, more technically correct way to do things (not utf-8 decoding sha1) so I ditched most of the regex stuff, but I'm glad I learned it!
 
-Get requests/url encoding: the requests library does everything! Though I did originally construct the message myself and use urllibs url encoding. Still trying to get the requests futures to play nicely with asyncio but I think it's a lost cause. 
+Get requests/url encoding: the requests library does everything! Though I did originally construct the message myself and use urllibs url encoding. Still trying to get the requests futures to play nicely with asyncio but I think it's a lost cause.
 
 IP address: easy to get your local IP address with ifconfig, getting your external IP requires contacting a website!
 
@@ -19,4 +37,3 @@ Yield and Yield from: learned how to write an equivalent of yield from using yie
 Asyncio: Confusing, but it makes all my connections happen super fast. Keeps the code easier to read than endless callbacks!
 
 Read/write: reading and writing to/from files was all new to me a month ago. Seek has been super helpful in getting all the right pieces in all the right places.
-
