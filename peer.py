@@ -5,18 +5,31 @@ import asyncio
 class Peer():
 	'''	Is responisble for handling information about a peer. 
 		Handles state interactions- interested, choking, connecting to
-		peers, listening for and parsing and acting on messages sent by 
-		the peer, and constructing and sending messages.
-	'''
-	def __init__(self, ip, port, torrent):
+		peers, listening for, parsing and acting on messages sent by 
+		the peer, and constructing and sending messages to the peer.
+
+	keep alive: <len=0000>,
+	choke: <len=0001><id=0>, 
+	unchoke: <len=0001><id=1>, 
+	interested: <len=0001><id=2>, 
+	not interested: <len=0001><id=3>, 
+	have: <len=0005><id=4><piece index>, 
+	bitfield: <len=0001+X><id=5><bitfield>, 
+	request: <len=0013><id=6><index><begin><length>, 
+	piece: <len=0009+X><id=7><index><begin><block>, 
+	cancel: <len=0013><id=8><index><begin><length>, 
+	port: <len=0003><id=9><listen-port>
+	
+	'''	
+	def __init__(self, ip, port, torrent_downloader):
 		self.IP = ip
 		self.port = port
-		self.torrent = torrent
-		# choke: <len=0001><id=0>, unchoke: <len=0001><id=1>, interested: <len=0001><id=2>, not interested: <len=0001><id=3>, have: <len=0005><id=4><piece index>, bitfield: <len=0001+X><id=5><bitfield>, request: <len=0013><id=6><index><begin><length>, piece: <len=0009+X><id=7><index><begin><block>, cancel: <len=0013><id=8><index><begin><length>, port: <len=0003><id=9><listen-port>
+		self.torrent_downloader = torrent_downloader
+		self.torrent = torrent_downloader.torrent
 		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.connected = False
 		self.handshake_bytes = None
-		self.has_pieces = [False] * self.torrent.number_of_pieces
+		# self.has_pieces = [False] * self.torrent.number_of_pieces
 		self.state = {
 				'am_choking' : True,
 				'am_interested' : False,
@@ -38,6 +51,8 @@ class Peer():
 		}
 		self.buffer = b''
 		self.io_loop = asyncio.get_event_loop()
+		self.current_piece = b''
+		self.piece_length = self.torrent.piece_length
 
 	@asyncio.coroutine
 	def connect(self, message):
@@ -54,6 +69,8 @@ class Peer():
 		self.check_handshake(self.buffer[:68])
 
 	def check_handshake(self, handshake_bytes):
+		extension = handshake_bytes[20:28]
+		print('Extension:', extension)
 		if handshake_bytes[28:48] != self.message[28:48]:
 			self.sock.close()
 			raise Exception('Peer returned invalid info_hash. Closing socket')	
@@ -75,6 +92,12 @@ class Peer():
 				self.sock.close
 				self.connected = False
 			self.buffer += message_bytes
+
+
+
+	# READ RECEIVED MESSAGES:
+
+
 
 	def dispatch_messages_from_buffer(self):
 		''' First four bytes of each message are an indication of length. 
@@ -106,24 +129,35 @@ class Peer():
 		self.message_ID_to_func_name[message_id](message_slice)
 	
 	def keep_alive(self):
+		''' <len=0000>
+		'''
 		print('KEEP ALIVE')# TODO: update time/state
 		pass
 
 	def choke(self, message_bytes):
+		'''choke: <len=0001><id=0>
+		''' 
 		self.state['peer_choking'] = True 
 			
 	def unchoke(self, message_bytes):
+		''' unchoke: <len=0001><id=1>
+		''' 
 		self.state['peer_choking'] = False
 		
 	def interested(self, message_bytes):
-		self.state['peer_interested'] == True
+		''' interested: <len=0001><id=2>
+		'''
+		self.state['peer_interested'] = True
 			
 	def not_interested(self, message_bytes):
-		self.state['peer_interested'] == False
+		''' not interested: <len=0001><id=3>
+		'''
+		self.state['peer_interested'] = False
 		
 	def have(self, message_bytes):
 		'''	Have message is the index of a piece the peer has. Updates
 			peer.has_pieces.
+			have: <len=0005><id=4><piece index>
 		'''
 		piece_index = int.from_bytes(message_bytes, byteorder='big')
 		# print('PEER HAS PIECE AT INDEX:', piece_index)
@@ -136,42 +170,53 @@ class Peer():
 		bitstring = ''.join('{0:08b}'.format(byte) for byte in message_bytes)
 		self.has_pieces = [bool(int(c)) for c in bitstring]
 		# print('PEER HAS PIECES:', self.has_pieces)
-		self.torrent.pieces_changed_callback(self)
+		self.torrent_downloader.pieces_changed_callback(self)
 		
 	def request(self, message_bytes):
+		''' <len=0013><id=6><index><offset><length>
+			Calls torrent.get_piece() and sends relevent piece to peer.
+		'''
 		index = message_bytes[:4]
 		piece_offset = message_bytes[4:8]
 		length = message_bytes[8:]
-		# request: <len=0013><id=6><index><begin><length>
+		payload_bytes = self.torrent.construct_piece_payload(index, offset, length)
 		
 	def piece(self, message_bytes):
 		''' Piece message is constructed:
-			<index><offset><piece bytes>
+			<len=9 + X><id=8><index><offset><piece bytes>
 		'''
 		piece_index = message_bytes[:4]
 		piece_begins = message_bytes[4:8]
 		piece = message_bytes[8:]
-		self.torrent.check_piece_callback(piece, piece_index, self)
+		if len(self.current_piece) == self.piece_length:
+			self.torrent.check_piece_callback(piece, piece_index, self)
+		else:
+			self.current_piece += piece
+			# Write to temp file?? multiple peers working on each piece?
 	
-		#piece: <len=0009+X><id=7><index><begin><block>,
 	def cancel(self, message_bytes):
+		'''cancel: <len=0013><id=8><index><begin><length>
+		'''
 		pass
-		#cancel: <len=0013><id=8><index><begin><length>,
-	def port(self, message_bytes):
-		print('HELP! I HAVE A PORT REQUEST!!!!!')
-		pass
-		#port: <len=0003><id=9><listen-port>
 
-	def construct_payload(self, message_id):
+	def port(self, message_bytes):
+		''' port: <len=0003><id=9><listen-port>
+		'''
 		pass
-			
+		
+	
+
+	# CONSTRUCT AND SEND MESSAGES
+
+
+
+
 	def construct_message(self, message_id, payload_bytes=b''):
 		'''messages in the protocol take the form of 
 		<length prefix><message ID><payload>. The length prefix is a four byte 
 		big-endian value. The message ID is a single decimal byte. 
 		The payload is message dependent.
 		'''
-		# print('CONSTRUCTING MESSAGE')
 		length_bytes = (1 + len(payload_bytes)).to_bytes(4, byteorder='big')
 		message_id_bytes = message_id.to_bytes(1, byteorder='big')
 		elements = [length_bytes, message_id_bytes, payload_bytes]
