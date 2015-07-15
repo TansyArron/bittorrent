@@ -1,12 +1,9 @@
-import hashlib
-import bencoding
-import peer
-import tracker
-import requests
-import asyncio
-import math
-import os
-import json
+
+from peer import Peer
+from tracker import Tracker
+from requests import get
+from asyncio import get_event_loop
+from json import loads
 
 class Torrent_Downloader():
 	''' Manages download logic:
@@ -18,9 +15,9 @@ class Torrent_Downloader():
 		self.torrent = torrent
 		self.start_listener_callback = start_listener_callback
 		self.ip = self.get_IP_address()
-		self.tracker = tracker.Tracker(self.torrent.announce, self.torrent.get_params())
+		self.tracker = Tracker(self.torrent.announce, self.torrent.get_params())
 		self.peers = self.create_peers()
-		self.io_loop = asyncio.get_event_loop()
+		self.io_loop = get_event_loop()
 		self.index = 0
 		self.callback_dict = {
 			'check_piece' : self.torrent.check_piece_callback,
@@ -31,8 +28,8 @@ class Torrent_Downloader():
 
 
 	def get_IP_address(self):
-		response = requests.get('http://api.ipify.org?format=json')
-		ip_object = json.loads(response.text)
+		response = get('http://api.ipify.org?format=json')
+		ip_object = loads(response.text)
 		return ip_object["ip"]
 
 	def create_peers(self):
@@ -40,7 +37,7 @@ class Torrent_Downloader():
 		for p in self.tracker.parse_peer_address():
 			if p[0] == self.ip:
 				continue
-			peers.append(peer.Peer(p[0], p[1], self))
+			peers.append(Peer(p[0], p[1], self))
 		return peers
 
 
@@ -68,6 +65,7 @@ class Torrent_Downloader():
 		self.torrent.update_pieces_needed()
 		self.construct_request_payload(piece_index, peer)
 
+
 	def construct_request_payload(self, piece_index, peer):
 		'''	Constructs the payload of a request message for piece_index.
 			Calls peer.send_message to finish construction and send.
@@ -78,13 +76,5 @@ class Torrent_Downloader():
 		payload = b''.join([piece_index_bytes, piece_begin, piece_length])
 		self.io_loop.create_task(peer.send_message(6, payload))	
 
-	def construct_piece_payload(self, index, offset, length):
-		''' Constructs payload of piece requested by peer. 
-		'''
-		message_id = 8
-		start = index* self.piece_length + offset
-		with open(os.path.join(self.get_directory, self.filename), 'rb+') as torrent_file:
-				torrent_file.seek(start)
-				piece = torrent_file.read(length)
 
 	

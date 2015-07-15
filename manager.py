@@ -1,17 +1,17 @@
-import sys
-import torrent
-import torrent_downloader
-import asyncio
-import traceback
+from sys import argv
+from torrent import Torrent
+from torrent_downloader import Torrent_Downloader
+from asyncio import get_event_loop, coroutine
+from traceback import print_exc
 
 class Manager():
 	def __init__(self, torrent_file):
-		self.torrent = torrent.Torrent(torrent_file)
-		self.torrent_downloader = torrent_downloader.Torrent_Downloader(self.torrent, self.start_listener_callback)
-		self.loop = asyncio.get_event_loop()
+		self.torrent = Torrent(torrent_file)
+		self.torrent_downloader = Torrent_Downloader(self.torrent, self.start_listener_callback)
+		self.loop = get_event_loop()
 		self.start_loop = self.start_loop()
 
-	@asyncio.coroutine
+	@coroutine
 	def start_listener_callback(self):
 		for peer in self.torrent_downloader.peers:
 			if peer.connected:
@@ -21,7 +21,7 @@ class Manager():
 		self.torrent_downloader.peer.sock.close()
 		self.torrent_downloader.peer_list.remove(peer)
 		
-	@asyncio.coroutine
+	@coroutine
 	def connect_peers(self):
 		for peer in self.torrent_downloader.peers:
 			try:
@@ -35,7 +35,7 @@ class Manager():
 		self.loop.create_task(self.connect_peers())
 		self.loop.run_forever()
 		
-torrent_file = sys.argv[1]
+torrent_file = argv[1]
 manager = Manager(torrent_file)
 
 

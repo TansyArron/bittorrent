@@ -1,6 +1,5 @@
 import socket
-import sys
-import asyncio
+from asyncio import get_event_loop, coroutine
 
 class Peer():
 	'''	Is responisble for handling information about a peer. 
@@ -50,11 +49,11 @@ class Peer():
 			9: self.port,
 		}
 		self.buffer = b''
-		self.io_loop = asyncio.get_event_loop()
+		self.io_loop = get_event_loop()
 		self.current_piece = b''
 		self.piece_length = self.torrent.piece_length
 
-	@asyncio.coroutine
+	@coroutine
 	def connect(self, message):
 		self.message = message
 		self.sock.setblocking(0)
@@ -79,7 +78,7 @@ class Peer():
 			self.buffer = self.buffer[68:]
 
 
-	@asyncio.coroutine
+	@coroutine
 	def listen(self):
 		''' Listen for messages from socket
 		'''
@@ -216,7 +215,7 @@ class Peer():
 		message_bytes = b''.join(elements)
 		return message_bytes
 
-	@asyncio.coroutine
+	@coroutine
 	def send_message(self, message_id, payload_bytes=b''):
 		''' Send message and update self.state if necessary
 		'''

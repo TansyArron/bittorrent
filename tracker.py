@@ -1,5 +1,5 @@
-import requests
-import bencoding
+from requests import get
+from bencoding import decode
 
 class Tracker():
 	''' Handles information from the tracker. Creates a list of peers in the form
@@ -17,8 +17,8 @@ class Tracker():
 		'''	Construct tracker request and return decoded response.
 			Spec here: https://wiki.theory.org/BitTorrentSpecification#Tracker_Request_Parameters
 		'''
-		tracker_info = requests.get(self.announce, params=self.tracker_params, stream=True).raw.read()
-		return bencoding.decode(tracker_info)
+		tracker_info = get(self.announce, params=self.tracker_params, stream=True).raw.read()
+		return decode(tracker_info)
 
 	def update_tracker_id(self):
 		''' if the tracker sends an ID, update tracker_id. This is used for ongoing communication

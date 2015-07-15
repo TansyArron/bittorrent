@@ -1,12 +1,11 @@
-import hashlib
-import bencoding
-import peer
-import random
-import requests
-import math
-import os
-import json
-import asyncio
+from hashlib import sha1
+from bencoding import decode as bdecode
+from random import randrange
+from requests import get
+from math import ceil
+from os import makedirs, path
+from json import loads
+from asyncio import get_event_loop
 
 class Torrent():
 	''' Contains all torrent meta info, constructs handshake.
@@ -15,14 +14,14 @@ class Torrent():
 	def __init__(self, torrent_file):
 		with open(torrent_file, 'rb') as f:
 			self.torrent_file = f.read()
-		self.meta_info_dict = bencoding.decode(self.torrent_file)
+		self.meta_info_dict = bdecode(self.torrent_file)
 		self.announce = self.meta_info_dict[b'announce'].decode('utf-8')
 		self.info_dict = self.meta_info_dict[b'info']
 		self.bencoded_info_dict = self.info_dict['ben_string']
 		self.filename = self.info_dict[b'name'].decode('utf-8')
 		self.path = 'torrents_in_progress'
-		self.info_hash = hashlib.sha1(self.bencoded_info_dict).digest()
-		self.peer_id = '-'.join(['','TZ', '0000', str(random.randrange(10000000000,99999999999))])
+		self.info_hash = sha1(self.bencoded_info_dict).digest()
+		self.peer_id = '-'.join(['','TZ', '0000', str(randrange(10000000000,99999999999))])
 		self.ip = self.get_IP_address()
 		self.port =  '6881' #TODO: Try ports in range (6881,6889)
 		self.length = int(self.info_dict[b'length']) if b'length' in self.info_dict \
@@ -30,26 +29,26 @@ class Torrent():
 		self.piece_length = int(self.info_dict[b'piece length'])
 		self.pieces = self.info_dict[b'pieces']
 		self.piece_hashes = [self.pieces[i:i+20] for i in range(0, len(self.pieces), 20)]
-		self.number_of_pieces = math.ceil(self.length/self.piece_length)
+		self.number_of_pieces = ceil(self.length/self.piece_length)
 		self.downloaded = 0
 		self.uploaded = 0
 		self.have = [False] * self.number_of_pieces #TODO: pass torrent class a bitfield and handle restarting torrents
 		self.complete = False #TODO: Update when self.pieces_needed is empty
-		self.io_loop = asyncio.get_event_loop()
+		self.io_loop = get_event_loop()
 		self.pieces_needed = []
 
 	
 	def get_IP_address(self):
-		response = requests.get('http://api.ipify.org?format=json')
-		ip_object = json.loads(response.text)
+		response = get('http://api.ipify.org?format=json')
+		ip_object = loads(response.text)
 		return ip_object["ip"]
 
 	@property
 	def get_directory(self):
 		'''TODO: add handling for multiple file torrents
 		'''
-		if not os.path.exists(self.path):
-			os.makedirs(self.path)
+		if not path.exists(self.path):
+			makedirs(self.path)
 		return self.path
 
 	@property
@@ -105,7 +104,7 @@ class Torrent():
 			choose the next piece. 
 		'''
 		piece_index = int.from_bytes(piece_index_bytes, byteorder='big')
-		received_hash = hashlib.sha1(piece).digest()
+		received_hash = sha1(piece).digest()
 		#hash_from_info = self.pieces[piece_index * 20:(1 + piece_index) * 20]
 		hash_from_info = self.piece_hashes[piece_index]
 		if received_hash == hash_from_info:
@@ -125,11 +124,11 @@ class Torrent():
 		print('Writing piece {} to file'.format(piece_index))
 		offset = piece_index * self.piece_length
 		try:
-			with open(os.path.join(self.get_directory, self.filename), 'rb+') as torrent_file:
+			with open(path.join(self.get_directory, self.filename), 'rb+') as torrent_file:
 				torrent_file.seek(offset)
 				torrent_file.write(piece)
 		except IOError: #file does not exist yet.
-			with open(os.path.join(self.get_directory, self.filename), 'wb') as torrent_file:
+			with open(path.join(self.get_directory, self.filename), 'wb') as torrent_file:
 				torrent_file.seek(offset)
 				torrent_file.write(piece)
 			
