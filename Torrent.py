@@ -15,7 +15,6 @@ class Torrent():
 	def __init__(self, torrent_file):
 		with open(torrent_file, 'rb') as f:
 			self.torrent_file = f.read()
-		# self.start_listener_callback = start_listener_callback
 		self.meta_info_dict = bencoding.decode(self.torrent_file)
 		self.announce = self.meta_info_dict[b'announce'].decode('utf-8')
 		self.info_dict = self.meta_info_dict[b'info']
@@ -35,19 +34,8 @@ class Torrent():
 		self.downloaded = 0
 		self.uploaded = 0
 		self.have = [False] * self.number_of_pieces #TODO: pass torrent class a bitfield and handle restarting torrents
-		# self.tracker_info = self.get_info_from_tracker()
-		# self.peer_info = self.tracker_info[b'peers']
-		# self.peer_list = self.parse_peer_address()
-		# self.peers = self.create_peers()
-		# self.tracker_id = None
 		self.complete = False #TODO: Update when self.pieces_needed is empty
 		self.io_loop = asyncio.get_event_loop()
-		# self.index = 0
-		# self.callback_dict = {
-		# 	'check_piece' : self.check_piece_callback,
-		# 	'pieces_changed' : self.pieces_changed_callback,
-		# 	'start_listener' : self.start_listener_callback,
-		# }
 		self.pieces_needed = []
 
 	
@@ -94,62 +82,6 @@ class Torrent():
 		}
 
 
-	# TRACKER STUFF:
-
-	# def get_info_from_tracker(self):
-	# 	'''	Construct tracker request and return decoded response.
-	# 		Spec here: https://wiki.theory.org/BitTorrentSpecification#Tracker_Request_Parameters
-	# 	'''
-	# 	tracker_info = requests.get(self.announce, params=self.get_params(), stream=True).raw.read()
-	# 	print(tracker_info)
-	# 	# print(bencoding.decode(tracker_info))
-	# 	return bencoding.decode(tracker_info)
-
-	# def update_tracker_id(self):
-	# 	''' if the tracker sends an ID, update tracker_id. This is used for ongoing communication
-	# 		with tracker while seeding.
-	# 	'''
-	# 	if 'tracker_id' in self.tracker_info:
-	# 		self.tracker_id = self.tracker_info['tracker_id']
-			
-	# def parse_peer_address(self):
-	# 	''' The tracker response contains the IPs and ports for active peers. 
-	# 		These can be in two forms:
-	# 		Dictionary model: A list of dictionaries, each with the following keys:
-	# 			peer id: peer's self-selected ID, as described above for the tracker request (string)
-	# 			ip: peer's IP address either IPv6 (hexed) or IPv4 (dotted quad) or DNS name (string)
-	# 			port: peer's port number (integer)
-	# 		Binary model: Instead of using the dictionary model described above, the peers value 
-	# 			may be a string consisting of multiples of 6 bytes. First 4 bytes are the IP address 
-	# 			and last 2 bytes are the port number. All in network (big endian) notation.
-	# 	'''		
-	# 	peer_list = []
-	# 	if isinstance(self.peer_info, list):
-	# 		# Dictionary Model
-	# 		for peer in self.peer_info:
-	# 			peer_list.append(peer_dict[ip], peer_dict[port])
-		
-	# 	else:
-	# 		# Binary Model
-	# 		peers = [self.peer_info[i:i+6] for i in range(0, len(self.peer_info), 6)]
-	# 		for peer in peers:
-	# 			ip = '.'.join(str(i) for i in peer[:4])
-	# 			port = int.from_bytes(peer[4:], byteorder='big')
-	# 			peer_list.append((ip, port))
-	# 	print('peer_list', peer_list)
-	# 	self.peer_list = peer_list
-
-
-	# TORRENT_DOWNLOADER STUFF:
-
-	# def create_peers(self):
-	# 	peers = []
-	# 	for p in self.get_peer_address():
-	# 		if p[0] == self.ip:
-	# 			continue
-	# 		peers.append(peer.Peer(p[0], p[1], self))
-	# 	return peers
-
 	def update_pieces_needed(self):
 		'''	Search self.have for pieces not yet recieved and add them to list. 
 			If all pieces are accounted for, stop the io_loop and change self.complete
@@ -163,50 +95,6 @@ class Torrent():
 			self.complete = True
 			self.io_loop.stop()
 			print("DONE!!!!!")
-
-	# def pieces_changed_callback(self, peer):
-	# 	'''	Check if connected peer has pieces I need. Send interested message.
-	# 		Call choose_piece.
-	# 		If peer has no pieces I need, disconnect and remove from peers list.
-	# 	'''
-	# 	self.update_pieces_needed()
-	# 	for i in self.pieces_needed:
-	# 		if peer.has_pieces[i]:
-	# 			self.io_loop.create_task(peer.send_message(2))
-	# 			self.choose_piece(peer)	
-	# 			break
-	# 		else:
-	# 			self.peers.remove(peer)
-	# 	# TODO except if peer has no needed pieces and disconnect.
-
-	# def choose_piece(self, peer):
-	# 	'''	Finds the next needed piece, updates self.have and self.pieces_needed.
-	# 		calls construct_request_payload.
-	# 	'''
-	# 	piece_index = self.pieces_needed[0]
-	# 	self.have[piece_index] = True
-	# 	self.update_pieces_needed()
-	# 	self.construct_request_payload(piece_index, peer)
-
-	# def construct_request_payload(self, piece_index, peer):
-	# 	'''	Constructs the payload of a request message for piece_index.
-	# 		Calls peer.send_message to finish construction and send.
-	# 	'''
-	# 	piece_index_bytes = (piece_index).to_bytes(4, byteorder='big')
-	# 	piece_begin = (0).to_bytes(4, byteorder='big')
-	# 	piece_length = (16384).to_bytes(4, byteorder='big')
-	# 	payload = b''.join([piece_index_bytes, piece_begin, piece_length])
-	# 	self.io_loop.create_task(peer.send_message(6, payload))	
-
-	# def construct_piece_payload(self, index, offset, length):
-	# 	''' Constructs payload of piece requested by peer. 
-	# 	'''
-	# 	message_id = 8
-	# 	start = index* self.piece_length + offset
-	# 	with open(os.path.join(self.get_directory, self.filename), 'rb+') as torrent_file:
-	# 			torrent_file.seek(start)
-	# 			piece = torrent_file.read(length)
-
 
 
 	def check_piece_callback(self, piece, piece_index_bytes, peer):
@@ -223,7 +111,6 @@ class Torrent():
 		if received_hash == hash_from_info:
 			self.write_piece(piece, piece_index)
 			self.downloaded += 1
-			self.choose_piece(peer)
 		else:
 			print('PIECE AT INDEX {} DOES NOT MATCH HASH'.format(piece_index))
 			print('received:', received_hash)

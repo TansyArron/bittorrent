@@ -15,19 +15,11 @@ class Torrent_Downloader():
 		- Checking completed pieces and writing to file.
 	'''
 	def __init__(self, torrent, start_listener_callback):
-		# self.filename = torrent.filename
-		# self.path = torrent.path
-		# self.tracker_info = self.get_info_from_tracker()
-		# self.tracker_id = None
-		# self.peer_list = torrent.peer_info
 		self.torrent = torrent
 		self.start_listener_callback = start_listener_callback
 		self.ip = self.get_IP_address()
 		self.tracker = tracker.Tracker(self.torrent.announce, self.torrent.get_params())
-		# self.peer_list = torrent.peer_list
 		self.peers = self.create_peers()
-		# self.have = [False] * self.number_of_pieces #TODO: pass torrent class a bitfield and handle restarting torrents
-		# self.complete = False #TODO: Update when self.pieces_needed is empty
 		self.io_loop = asyncio.get_event_loop()
 		self.index = 0
 		self.callback_dict = {
@@ -51,19 +43,6 @@ class Torrent_Downloader():
 			peers.append(peer.Peer(p[0], p[1], self))
 		return peers
 
-	# def update_pieces_needed(self):
-	# 	'''	Search self.have for pieces not yet recieved and add them to list. 
-	# 		If all pieces are accounted for, stop the io_loop and change self.complete
-	# 		to True
-	# 	'''
-	# 	self.pieces_needed = []
-	# 	for index, value in enumerate(self.have):
-	# 		if not value:
-	# 			self.pieces_needed.append(index)
-	# 	if not self.pieces_needed:
-	# 		self.complete = True
-	# 		self.io_loop.stop()
-	# 		print("DONE!!!!!")
 
 	def pieces_changed_callback(self, peer):
 		'''	Check if connected peer has pieces I need. Send interested message.
@@ -78,7 +57,7 @@ class Torrent_Downloader():
 				break
 			else:
 				self.peers.remove(peer)
-		# TODO except if peer has no needed pieces and disconnect.
+
 
 	def choose_piece(self, peer):
 		'''	Finds the next needed piece, updates self.have and self.pieces_needed.

@@ -7,10 +7,10 @@ Usage:
 python manager.py /path/to/torrent_file.torrent
 
 TODO:
-- Bendecode: handle trailing junk
 - Optimize get_next_piece: Currently chooses the lowest indexed piece it needs.
-- handle extensions for peer IP/port formatting
-- handle extensions for varying hash functions	
+<!-- - Handshake reserved bytes:
+	- handle extensions for peer IP/port formatting
+	- handle extensions for varying hash functions -->
 - Create bitfield from file/meta_info or use torrent.have
 - Construct 'have' messages
 - Construct bitfield messages

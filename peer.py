@@ -5,8 +5,9 @@ import asyncio
 class Peer():
 	'''	Is responisble for handling information about a peer. 
 		Handles state interactions- interested, choking, connecting to
-		peers, listening for, parsing and acting on messages sent by 
-		the peer, and constructing and sending messages to the peer.
+		peers, listening for, parsing messages, constructing, and sending messages.
+
+	MESSAGES:
 
 	keep alive: <len=0000>,
 	choke: <len=0001><id=0>, 
@@ -29,7 +30,6 @@ class Peer():
 		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.connected = False
 		self.handshake_bytes = None
-		# self.has_pieces = [False] * self.torrent.number_of_pieces
 		self.state = {
 				'am_choking' : True,
 				'am_interested' : False,
@@ -56,7 +56,6 @@ class Peer():
 
 	@asyncio.coroutine
 	def connect(self, message):
-
 		self.message = message
 		self.sock.setblocking(0)
 		yield from self.io_loop.sock_connect(self.sock, (self.IP, self.port))
@@ -70,7 +69,6 @@ class Peer():
 
 	def check_handshake(self, handshake_bytes):
 		extension = handshake_bytes[20:28]
-		print('Extension:', extension)
 		if handshake_bytes[28:48] != self.message[28:48]:
 			self.sock.close()
 			raise Exception('Peer returned invalid info_hash. Closing socket')	
@@ -79,6 +77,7 @@ class Peer():
 			self.connected = True
 			self.io_loop.create_task(self.listen())
 			self.buffer = self.buffer[68:]
+
 
 	@asyncio.coroutine
 	def listen(self):
@@ -125,13 +124,11 @@ class Peer():
 		'''
 		message_id = message_bytes[0]
 		message_slice = message_bytes[1:]
-		# print('RECIEVED MESSAGE TYPE:', self.message_ID_to_func_name[message_id])
 		self.message_ID_to_func_name[message_id](message_slice)
 	
 	def keep_alive(self):
 		''' <len=0000>
 		'''
-		print('KEEP ALIVE')# TODO: update time/state
 		pass
 
 	def choke(self, message_bytes):
@@ -160,7 +157,6 @@ class Peer():
 			have: <len=0005><id=4><piece index>
 		'''
 		piece_index = int.from_bytes(message_bytes, byteorder='big')
-		# print('PEER HAS PIECE AT INDEX:', piece_index)
 		self.has_pieces[piece_index] = True
 		
 	def bitfield(self, message_bytes):
@@ -169,7 +165,6 @@ class Peer():
 		'''
 		bitstring = ''.join('{0:08b}'.format(byte) for byte in message_bytes)
 		self.has_pieces = [bool(int(c)) for c in bitstring]
-		# print('PEER HAS PIECES:', self.has_pieces)
 		self.torrent_downloader.pieces_changed_callback(self)
 		
 	def request(self, message_bytes):
@@ -188,12 +183,10 @@ class Peer():
 		piece_index = message_bytes[:4]
 		piece_begins = message_bytes[4:8]
 		piece = message_bytes[8:]
-		if len(self.current_piece) == self.piece_length:
-			self.torrent.check_piece_callback(piece, piece_index, self)
-		else:
-			self.current_piece += piece
-			# Write to temp file?? multiple peers working on each piece?
-	
+		self.torrent.check_piece_callback(piece, piece_index, self)
+		self.torrent_downloader.choose_piece(self)
+		
+
 	def cancel(self, message_bytes):
 		'''cancel: <len=0013><id=8><index><begin><length>
 		'''
@@ -227,7 +220,6 @@ class Peer():
 	def send_message(self, message_id, payload_bytes=b''):
 		''' Send message and update self.state if necessary
 		'''
-		# print("SENDING MESSAGE TYPE:", self.message_ID_to_func_name[message_id])
 		message = self.construct_message(message_id, payload_bytes)
 		yield from self.io_loop.sock_sendall(self.sock, message)
 		if message_id in [0,1,2,3]:

@@ -18,8 +18,6 @@ class Tracker():
 			Spec here: https://wiki.theory.org/BitTorrentSpecification#Tracker_Request_Parameters
 		'''
 		tracker_info = requests.get(self.announce, params=self.tracker_params, stream=True).raw.read()
-		print(tracker_info)
-		# print(bencoding.decode(tracker_info))
 		return bencoding.decode(tracker_info)
 
 	def update_tracker_id(self):
@@ -54,5 +52,4 @@ class Tracker():
 				port = int.from_bytes(peer[4:], byteorder='big')
 				peer_list.append((ip, port))
 		print('peer_list', peer_list)
-		# self.peer_list = peer_list
 		return peer_list
