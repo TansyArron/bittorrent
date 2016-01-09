@@ -4,6 +4,7 @@ from torrent_downloader import Torrent_Downloader
 from asyncio import get_event_loop, coroutine
 from traceback import print_exc
 
+
 class Manager():
 	def __init__(self, torrent_file):
 		self.torrent = Torrent(torrent_file)
@@ -26,9 +27,9 @@ class Manager():
 		for peer in self.torrent_downloader.peers:
 			try:
 				print('CONNECTING')
-				self.loop.create_task(peer.connect(self.torrent.handshake))
+				self.loop.create_task(peer.connect(self.torrent_downloader.message_handler.handshake))
 			except Exception as e:
-				traceback.print_exc()
+				print_exc()
 				print('peer {} failed to connect. Exception: "{}"'.format(peer, e))
 		
 	def start_loop(self):

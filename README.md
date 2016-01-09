@@ -8,14 +8,11 @@ python manager.py /path/to/torrent_file.torrent
 
 TODO:
 - Optimize get_next_piece: Currently chooses the lowest indexed piece it needs.
-<!-- - Handshake reserved bytes:
-	- handle extensions for peer IP/port formatting
-	- handle extensions for varying hash functions -->
 - Create bitfield from file/meta_info or use torrent.have
 - Construct 'have' messages
 - Construct bitfield messages
 - Listen for peers
-- Respond to piece requests: Given index, length and offset 			within piece, get the requested bytes, form a "piece" 			message and send to peer
+- Respond to piece requests: Given index, length and offset within piece, get the requested bytes, form a "piece" message and send to peer
 - Handle multi-file torrents
 
 TIL:

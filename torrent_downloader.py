@@ -1,4 +1,4 @@
-
+from message_handler import MessageHandler
 from peer import Peer
 from tracker import Tracker
 from requests import get
@@ -13,6 +13,7 @@ class Torrent_Downloader():
 	'''
 	def __init__(self, torrent, start_listener_callback):
 		self.torrent = torrent
+		self.message_handler = MessageHandler(self.torrent, self)
 		self.start_listener_callback = start_listener_callback
 		self.ip = self.get_IP_address()
 		self.tracker = Tracker(self.torrent.announce, self.torrent.get_params())
@@ -40,7 +41,6 @@ class Torrent_Downloader():
 			peers.append(Peer(p[0], p[1], self))
 		return peers
 
-
 	def pieces_changed_callback(self, peer):
 		'''	Check if connected peer has pieces I need. Send interested message.
 			Call choose_piece.
@@ -49,12 +49,11 @@ class Torrent_Downloader():
 		self.torrent.update_pieces_needed()
 		for i in self.torrent.pieces_needed:
 			if peer.has_pieces[i]:
-				self.io_loop.create_task(peer.send_message(2))
-				self.choose_piece(peer)	
+				self.io_loop.create_task(self.message_handler.send_message(peer=peer, message_id=2))
+				self.choose_piece(peer=peer)	
 				break
 			else:
 				self.peers.remove(peer)
-
 
 	def choose_piece(self, peer):
 		'''	Finds the next needed piece, updates self.have and self.pieces_needed.
@@ -63,18 +62,8 @@ class Torrent_Downloader():
 		piece_index = self.torrent.pieces_needed[0]
 		self.torrent.have[piece_index] = True
 		self.torrent.update_pieces_needed()
-		self.construct_request_payload(piece_index, peer)
+		self.message_handler.construct_request_payload(peer=peer, piece_index=piece_index)
 
-
-	def construct_request_payload(self, piece_index, peer):
-		'''	Constructs the payload of a request message for piece_index.
-			Calls peer.send_message to finish construction and send.
-		'''
-		piece_index_bytes = (piece_index).to_bytes(4, byteorder='big')
-		piece_begin = (0).to_bytes(4, byteorder='big')
-		piece_length = (16384).to_bytes(4, byteorder='big')
-		payload = b''.join([piece_index_bytes, piece_begin, piece_length])
-		self.io_loop.create_task(peer.send_message(6, payload))	
 
 
 	

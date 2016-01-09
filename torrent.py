@@ -8,7 +8,7 @@ from json import loads
 from asyncio import get_event_loop
 
 class Torrent():
-	''' Contains all torrent meta info, constructs handshake.
+	''' Contains all torrent meta info.
 
 	'''
 	def __init__(self, torrent_file):
@@ -44,30 +44,18 @@ class Torrent():
 		return ip_object["ip"]
 
 	@property
-	def get_directory(self):
+	def create_directory(self):
 		'''TODO: add handling for multiple file torrents
 		'''
-		if not path.exists(self.path):
+		if not os.path.exists(os.path.join(self.path, self.filename)):
 			makedirs(self.path)
+			open(os.path.join(self.path, self.filename, 'a')).close()
 		return self.path
 
 	@property
 	def left(self):
 		return int(self.length) - self.downloaded
 
-	@property	
-	def handshake(self):
-		''' construct handshake bytestring in form:
-			<19><'BitTorrent protocol'><00000000><ID>
-			Spec here: https://wiki.theory.org/BitTorrentSpecification#Handshake
-		'''
-		pstrlen = b'\x13'
-		pstr = b'BitTorrent protocol'
-		reserved = b'\x00\x00\x00\x00\x00\x00\x00\x00'
-		parts = [pstrlen, pstr, reserved, self.info_hash, self.peer_id.encode()]
-		handshake_string = b''.join(parts)
-		return handshake_string
-			
 	def get_params(self):
 		return {
 		'info_hash': self.info_hash,
@@ -77,9 +65,8 @@ class Torrent():
 		'peer_id': self.peer_id,
 		'port': self.port,
 		'left': self.left,
-		# 'compact': '0',
+		'compact': '0',
 		}
-
 
 	def update_pieces_needed(self):
 		'''	Search self.have for pieces not yet recieved and add them to list. 
@@ -95,10 +82,9 @@ class Torrent():
 			self.io_loop.stop()
 			print("DONE!!!!!")
 
-
 	def check_piece_callback(self, piece, piece_index_bytes, peer):
 		'''	hash a received piece and check against relevent hash provided in 
-			.torrent file. Write the piece to file. Update self.downloaded and
+			.torrent file. Update self.downloaded and
 			choose next piece.
 			If the hashes do not match, set self.have[piece_index] to False and 
 			choose the next piece. 
