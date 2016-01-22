@@ -1,4 +1,5 @@
 from asyncio import get_event_loop, coroutine
+from definitions import get_message_id, get_message_name
 
 class MessageHandler():
   def __init__(self, torrent, torrent_downloader):
@@ -6,18 +7,18 @@ class MessageHandler():
     self.torrent_downloader = torrent_downloader
     self.handshake = self.handshake()
     self.io_loop = get_event_loop()
-    self.message_ID_to_func_name = {
-      0: self.choke,
-      1: self.unchoke,
-      2: self.interested,
-      3: self.not_interested,
-      4: self.have,
-      5: self.bitfield,
-      6: self.request,
-      7: self.piece,
-      8: self.cancel, 
-      9: self.port,
-    }
+    self.message_func_name = [
+      self.choke,
+      self.unchoke,
+      self.interested,
+      self.not_interested,
+      self.have,
+      self.bitfield,
+      self.request,
+      self.piece,
+      self.cancel, 
+      self.port,
+    ]
 
   def handshake(self):
     ''' construct handshake bytestring in form:
@@ -49,7 +50,7 @@ class MessageHandler():
     message_id = message_bytes[0]
     message_slice = message_bytes[1:]
     print("Received Message: ", message_id)
-    self.message_ID_to_func_name[message_id](peer, message_slice)
+    self.message_func_name[message_id](peer, message_slice)
 
   def choke(self, peer, message_bytes):
     '''choke: <len=0001><id=0>
@@ -116,10 +117,6 @@ class MessageHandler():
     ''' port: <len=0003><id=9><listen-port>
     '''
     pass
-    
-  
-
-  # CONSTRUCT AND SEND MESSAGES
 
   def construct_request_payload(self, peer, piece_index, piece_offset=0, piece_length=16384):
     ''' Constructs the payload of a request message for piece_index.
@@ -130,14 +127,6 @@ class MessageHandler():
     piece_length = piece_length.to_bytes(4, byteorder='big')
     payload = b''.join([piece_index_bytes, piece_begin, piece_length])
     self.io_loop.create_task(self.send_message(peer, 6, payload))
-
-  # def construct_message(self, message_id, payload_bytes=b''):
-   
-  #   length_bytes = (1 + len(payload_bytes)).to_bytes(4, byteorder='big')
-  #   message_id_bytes = message_id.to_bytes(1, byteorder='big')
-  #   elements = [length_bytes, message_id_bytes, payload_bytes]
-  #   message_bytes = b''.join(elements)
-  #   return message_bytes
 
   @coroutine
   def send_message(self, peer, message_id, payload_bytes=b''):

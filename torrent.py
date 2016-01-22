@@ -101,7 +101,6 @@ class Torrent():
 			print('received:', received_hash)
 			print('expected:', hash_from_info)
 			self.have[piece_index] = False
-			self.choose_piece(peer)
 
 	def write_piece(self, piece, piece_index):
 		''' write piece to file in the appropriate location. If the file or path do not exist, 
